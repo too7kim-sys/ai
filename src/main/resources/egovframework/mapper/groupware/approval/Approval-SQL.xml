@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.approval.mapper.ApprovalMapper">
+
+    <resultMap id="formMap" type="egovframework.groupware.approval.service.ApprovalFormVO">
+        <id property="formId" column="form_id"/>
+        <result property="formCd" column="form_cd"/>
+        <result property="formNm" column="form_nm"/>
+        <result property="fieldsJson" column="fields_json"/>
+        <result property="useYn" column="use_yn"/>
+    </resultMap>
+
+    <resultMap id="docMap" type="egovframework.groupware.approval.service.ApprovalDocVO">
+        <id property="docId" column="doc_id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="formId" column="form_id"/>
+        <result property="formCd" column="form_cd"/>
+        <result property="formNm" column="form_nm"/>
+        <result property="title" column="title"/>
+        <result property="contentJson" column="content_json"/>
+        <result property="drafterId" column="drafter_id"/>
+        <result property="drafterName" column="drafter_name"/>
+        <result property="drafterDept" column="drafter_dept"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="submittedAt" column="submitted_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="lineMap" type="egovframework.groupware.approval.service.ApprovalLineVO">
+        <id property="lineId" column="line_id"/>
+        <result property="docId" column="doc_id"/>
+        <result property="stepNo" column="step_no"/>
+        <result property="approverId" column="approver_id"/>
+        <result property="approverName" column="approver_name"/>
+        <result property="lineTypeCd" column="line_type_cd"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="comment" column="comment"/>
+        <result property="actedAt" column="acted_at"/>
+        <result property="delegatedToUserId" column="delegated_to_user_id"/>
+    </resultMap>
+
+    <select id="listForms" resultMap="formMap">
+        SELECT * FROM gw_approval_form WHERE use_yn = 'Y' ORDER BY form_id
+    </select>
+    <select id="findForm" resultMap="formMap">
+        SELECT * FROM gw_approval_form WHERE form_cd = #{formCd}
+    </select>
+
+    <insert id="insertDoc" parameterType="egovframework.groupware.approval.service.ApprovalDocVO"
+            useGeneratedKeys="true" keyProperty="docId" keyColumn="doc_id">
+        INSERT INTO gw_approval_doc (doc_no, form_id, title, content_json, drafter_id, status_cd)
+        VALUES (#{docNo}, #{formId}, #{title}, #{contentJson}, #{drafterId},
+                COALESCE(#{statusCd}, 'DRAFT'))
+    </insert>
+    <update id="updateDocStatus">
+        UPDATE gw_approval_doc SET status_cd = #{statusCd}, updated_at = CURRENT_TIMESTAMP
+         WHERE doc_id = #{docId}
+    </update>
+    <update id="submit">
+        UPDATE gw_approval_doc
+           SET status_cd = 'IN_PROGRESS', submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE doc_id = #{docId}
+    </update>
+    <update id="complete">
+        UPDATE gw_approval_doc
+           SET status_cd = #{statusCd}, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE doc_id = #{docId}
+    </update>
+
+    <insert id="insertLine" parameterType="egovframework.groupware.approval.service.ApprovalLineVO"
+            useGeneratedKeys="true" keyProperty="lineId" keyColumn="line_id">
+        INSERT INTO gw_approval_line (doc_id, step_no, approver_id, line_type_cd, status_cd)
+        VALUES (#{docId}, #{stepNo}, #{approverId},
+                COALESCE(#{lineTypeCd}, 'APPROVE'),
+                COALESCE(#{statusCd}, 'PENDING'))
+    </insert>
+
+    <update id="updateLineApproval">
+        UPDATE gw_approval_line
+           SET status_cd = #{statusCd}, comment = #{comment}, acted_at = CURRENT_TIMESTAMP
+         WHERE line_id = #{lineId}
+    </update>
+
+    <select id="findDoc" resultMap="docMap">
+        SELECT d.*, f.form_cd, f.form_nm,
+               u.name AS drafter_name,
+               dept.dept_nm AS drafter_dept
+          FROM gw_approval_doc d
+          JOIN gw_approval_form f ON f.form_id = d.form_id
+          JOIN gw_user u ON u.user_id = d.drafter_id
+          LEFT JOIN gw_dept dept ON dept.dept_id = u.dept_id
+         WHERE d.doc_id = #{docId}
+    </select>
+
+    <select id="findLines" resultMap="lineMap">
+        SELECT l.*, u.name AS approver_name
+          FROM gw_approval_line l
+          JOIN gw_user u ON u.user_id = l.approver_id
+         WHERE l.doc_id = #{docId}
+         ORDER BY l.step_no
+    </select>
+
+    <select id="listByDrafter" resultMap="docMap">
+        SELECT d.*, f.form_cd, f.form_nm,
+               u.name AS drafter_name, dept.dept_nm AS drafter_dept
+          FROM gw_approval_doc d
+          JOIN gw_approval_form f ON f.form_id = d.form_id
+          JOIN gw_user u ON u.user_id = d.drafter_id
+          LEFT JOIN gw_dept dept ON dept.dept_id = u.dept_id
+         WHERE d.drafter_id = #{drafterId}
+        <if test="status != null and status != ''">
+           AND d.status_cd = #{status}
+        </if>
+         ORDER BY d.created_at DESC
+         LIMIT 200
+    </select>
+
+    <select id="listPending" resultMap="docMap">
+        SELECT DISTINCT d.*, f.form_cd, f.form_nm,
+               u.name AS drafter_name, dept.dept_nm AS drafter_dept
+          FROM gw_approval_doc d
+          JOIN gw_approval_form f ON f.form_id = d.form_id
+          JOIN gw_user u ON u.user_id = d.drafter_id
+          LEFT JOIN gw_dept dept ON dept.dept_id = u.dept_id
+          JOIN gw_approval_line l ON l.doc_id = d.doc_id
+         WHERE l.approver_id = #{approverId}
+           AND l.status_cd = 'PENDING'
+           AND d.status_cd = 'IN_PROGRESS'
+           AND l.step_no = (
+               SELECT MIN(l2.step_no) FROM gw_approval_line l2
+                WHERE l2.doc_id = d.doc_id AND l2.status_cd = 'PENDING'
+           )
+         ORDER BY d.submitted_at DESC
+         LIMIT 200
+    </select>
+
+    <select id="listCompleted" resultMap="docMap">
+        SELECT DISTINCT d.*, f.form_cd, f.form_nm,
+               u.name AS drafter_name, dept.dept_nm AS drafter_dept
+          FROM gw_approval_doc d
+          JOIN gw_approval_form f ON f.form_id = d.form_id
+          JOIN gw_user u ON u.user_id = d.drafter_id
+          LEFT JOIN gw_dept dept ON dept.dept_id = u.dept_id
+          JOIN gw_approval_line l ON l.doc_id = d.doc_id
+         WHERE l.approver_id = #{approverId}
+           AND l.status_cd IN ('APPROVED','REJECTED')
+        <if test="status != null and status != ''">
+           AND d.status_cd = #{status}
+        </if>
+         ORDER BY d.completed_at DESC NULLS LAST, d.updated_at DESC
+         LIMIT 200
+    </select>
+</mapper>

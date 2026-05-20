@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.leave.mapper.LeaveMapper">
+
+    <resultMap id="reqMap" type="egovframework.groupware.leave.service.LeaveRequestVO">
+        <id property="leaveId" column="leave_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="leaveTypeCd" column="leave_type_cd"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="days" column="days"/>
+        <result property="reason" column="reason"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="approvalDocId" column="approval_doc_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="balMap" type="egovframework.groupware.leave.service.LeaveBalanceVO">
+        <result property="userId" column="user_id"/>
+        <result property="year" column="year"/>
+        <result property="annualGiven" column="annual_given"/>
+        <result property="annualUsed" column="annual_used"/>
+    </resultMap>
+
+    <insert id="insertRequest" parameterType="egovframework.groupware.leave.service.LeaveRequestVO"
+            useGeneratedKeys="true" keyProperty="leaveId" keyColumn="leave_id">
+        INSERT INTO gw_leave_req (user_id, leave_type_cd, start_dt, end_dt, days, reason,
+                                  status_cd, approval_doc_id)
+        VALUES (#{userId}, #{leaveTypeCd}, #{startDt}, #{endDt}, #{days}, #{reason},
+                COALESCE(#{statusCd}, 'IN_PROGRESS'), #{approvalDocId})
+    </insert>
+
+    <update id="updateRequestStatus">
+        UPDATE gw_leave_req
+           SET status_cd = #{statusCd}, approval_doc_id = COALESCE(#{approvalDocId}, approval_doc_id),
+               updated_at = CURRENT_TIMESTAMP
+         WHERE leave_id = #{leaveId}
+    </update>
+
+    <select id="findById" resultMap="reqMap">
+        SELECT r.*, u.name AS user_name FROM gw_leave_req r
+          JOIN gw_user u ON u.user_id = r.user_id WHERE r.leave_id = #{leaveId}
+    </select>
+
+    <select id="findByApprovalDoc" resultMap="reqMap">
+        SELECT r.*, u.name AS user_name FROM gw_leave_req r
+          JOIN gw_user u ON u.user_id = r.user_id WHERE r.approval_doc_id = #{docId}
+    </select>
+
+    <select id="listByUser" resultMap="reqMap">
+        SELECT r.*, u.name AS user_name FROM gw_leave_req r
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.user_id = #{userId}
+         ORDER BY r.created_at DESC LIMIT 200
+    </select>
+
+    <select id="findBalance" resultMap="balMap">
+        SELECT * FROM gw_leave_balance WHERE user_id = #{userId} AND year = #{year}
+    </select>
+
+    <update id="upsertBalance">
+        INSERT INTO gw_leave_balance (user_id, year, annual_given, annual_used)
+        VALUES (#{userId}, #{year}, #{given}, 0)
+        ON CONFLICT (user_id, year) DO UPDATE SET annual_given = EXCLUDED.annual_given
+    </update>
+
+    <update id="addUsed">
+        UPDATE gw_leave_balance
+           SET annual_used = annual_used + #{days}, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = #{userId} AND year = #{year}
+    </update>
+</mapper>

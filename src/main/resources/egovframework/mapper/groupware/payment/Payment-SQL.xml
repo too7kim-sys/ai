@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.payment.mapper.PaymentMapper">
+
+    <insert id="insert" parameterType="egovframework.groupware.payment.service.PaymentVO"
+            useGeneratedKeys="true" keyProperty="paymentId" keyColumn="payment_id">
+        INSERT INTO gw_payment (invoice_id, pay_type_cd, pay_dt, amount, method_cd,
+                                bank_cd, bank_account, counterpart_nm, memo,
+                                approval_doc_id, reg_user_id)
+        VALUES (#{invoiceId}, #{payTypeCd}, COALESCE(#{payDt}, CURRENT_DATE),
+                #{amount}, COALESCE(#{methodCd}, 'BANK_TRANSFER'),
+                #{bankCd}, #{bankAccount}, #{counterpartNm}, #{memo},
+                #{approvalDocId}, #{regUserId})
+    </insert>
+</mapper>

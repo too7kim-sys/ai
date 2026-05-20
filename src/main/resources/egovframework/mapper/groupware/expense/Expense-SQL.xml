@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.expense.mapper.ExpenseMapper">
+
+    <resultMap id="reportMap" type="egovframework.groupware.expense.service.ExpenseReportVO">
+        <id property="reportId" column="report_id"/>
+        <result property="reportNo" column="report_no"/>
+        <result property="drafterId" column="drafter_id"/>
+        <result property="drafterName" column="drafter_name"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="title" column="title"/>
+        <result property="purpose" column="purpose"/>
+        <result property="totalNet" column="total_net"/>
+        <result property="totalVat" column="total_vat"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="approvalDocId" column="approval_doc_id"/>
+        <result property="reimburseRequiredYn" column="reimburse_required_yn"/>
+        <result property="reimbursePaymentId" column="reimburse_payment_id"/>
+        <result property="reimbursedAt" column="reimbursed_at"/>
+        <result property="memo" column="memo"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="itemMap" type="egovframework.groupware.expense.service.ExpenseItemVO">
+        <id property="itemId" column="item_id"/>
+        <result property="reportId" column="report_id"/>
+        <result property="seqNo" column="seq_no"/>
+        <result property="expenseDt" column="expense_dt"/>
+        <result property="categoryCd" column="category_cd"/>
+        <result property="accountCd" column="account_cd"/>
+        <result property="vendorNm" column="vendor_nm"/>
+        <result property="vendorBizNo" column="vendor_biz_no"/>
+        <result property="linkedVendorId" column="linked_vendor_id"/>
+        <result property="netAmount" column="net_amount"/>
+        <result property="vatAmount" column="vat_amount"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="paymentMethodCd" column="payment_method_cd"/>
+        <result property="cardLast4" column="card_last4"/>
+        <result property="receiptTypeCd" column="receipt_type_cd"/>
+        <result property="linkedInvoiceId" column="linked_invoice_id"/>
+        <result property="projectCd" column="project_cd"/>
+        <result property="memo" column="memo"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+    </resultMap>
+
+    <insert id="insertReport" parameterType="egovframework.groupware.expense.service.ExpenseReportVO"
+            useGeneratedKeys="true" keyProperty="reportId" keyColumn="report_id">
+        INSERT INTO gw_expense_report (report_no, drafter_id, dept_id, title, purpose,
+                                       total_net, total_vat, total_amount, status_cd,
+                                       approval_doc_id, reimburse_required_yn, memo, attach_group_id)
+        VALUES (#{reportNo}, #{drafterId}, #{deptId}, #{title}, #{purpose},
+                COALESCE(#{totalNet}, 0), COALESCE(#{totalVat}, 0), COALESCE(#{totalAmount}, 0),
+                COALESCE(#{statusCd}, 'DRAFT'), #{approvalDocId},
+                COALESCE(#{reimburseRequiredYn}, 'N'), #{memo}, #{attachGroupId})
+    </insert>
+
+    <update id="updateReport" parameterType="egovframework.groupware.expense.service.ExpenseReportVO">
+        UPDATE gw_expense_report
+           SET title = #{title}, purpose = #{purpose},
+               total_net = #{totalNet}, total_vat = #{totalVat}, total_amount = #{totalAmount},
+               reimburse_required_yn = #{reimburseRequiredYn},
+               memo = #{memo}, updated_at = CURRENT_TIMESTAMP
+         WHERE report_id = #{reportId}
+    </update>
+
+    <update id="updateReportStatus">
+        UPDATE gw_expense_report
+           SET status_cd = #{statusCd},
+               reimburse_payment_id = COALESCE(#{reimbursePaymentId}, reimburse_payment_id),
+               reimbursed_at = COALESCE(#{reimbursedAt}, reimbursed_at),
+               updated_at = CURRENT_TIMESTAMP
+         WHERE report_id = #{reportId}
+    </update>
+
+    <select id="findById" resultMap="reportMap">
+        SELECT r.*, u.name AS drafter_name, d.dept_nm
+          FROM gw_expense_report r
+          JOIN gw_user u ON u.user_id = r.drafter_id
+          LEFT JOIN gw_dept d ON d.dept_id = r.dept_id
+         WHERE r.report_id = #{reportId}
+    </select>
+
+    <select id="findByApprovalDoc" resultMap="reportMap">
+        SELECT r.*, u.name AS drafter_name, d.dept_nm
+          FROM gw_expense_report r
+          JOIN gw_user u ON u.user_id = r.drafter_id
+          LEFT JOIN gw_dept d ON d.dept_id = r.dept_id
+         WHERE r.approval_doc_id = #{docId}
+    </select>
+
+    <delete id="deleteItems">DELETE FROM gw_expense_item WHERE report_id = #{reportId}</delete>
+
+    <insert id="insertItem" parameterType="egovframework.groupware.expense.service.ExpenseItemVO">
+        INSERT INTO gw_expense_item (report_id, seq_no, expense_dt, category_cd, account_cd,
+                                     vendor_nm, vendor_biz_no, linked_vendor_id,
+                                     net_amount, vat_amount, total_amount,
+                                     payment_method_cd, card_last4, receipt_type_cd,
+                                     linked_invoice_id, project_cd, memo, attach_group_id)
+        VALUES (#{reportId}, #{seqNo}, #{expenseDt}, #{categoryCd}, #{accountCd},
+                #{vendorNm}, #{vendorBizNo}, #{linkedVendorId},
+                COALESCE(#{netAmount}, 0), COALESCE(#{vatAmount}, 0), COALESCE(#{totalAmount}, 0),
+                #{paymentMethodCd}, #{cardLast4}, COALESCE(#{receiptTypeCd}, 'CARD'),
+                #{linkedInvoiceId}, #{projectCd}, #{memo}, #{attachGroupId})
+    </insert>
+
+    <select id="findItems" resultMap="itemMap">
+        SELECT * FROM gw_expense_item WHERE report_id = #{reportId} ORDER BY seq_no
+    </select>
+
+    <select id="listMine" resultMap="reportMap">
+        SELECT r.*, u.name AS drafter_name, d.dept_nm
+          FROM gw_expense_report r
+          JOIN gw_user u ON u.user_id = r.drafter_id
+          LEFT JOIN gw_dept d ON d.dept_id = r.dept_id
+         WHERE r.drafter_id = #{userId}
+         ORDER BY r.created_at DESC LIMIT 200
+    </select>
+
+    <select id="listAdmin" resultMap="reportMap">
+        SELECT r.*, u.name AS drafter_name, d.dept_nm
+          FROM gw_expense_report r
+          JOIN gw_user u ON u.user_id = r.drafter_id
+          LEFT JOIN gw_dept d ON d.dept_id = r.dept_id
+         WHERE 1=1
+        <if test="status != null and status != ''">
+           AND r.status_cd = #{status}
+        </if>
+        <if test="deptId != null">
+           AND r.dept_id = #{deptId}
+        </if>
+         ORDER BY r.created_at DESC LIMIT 500
+    </select>
+
+    <update id="addBudgetUsed">
+        UPDATE gw_dept_budget
+           SET used_amount = used_amount + #{amount}
+         WHERE dept_id = #{deptId} AND account_cd = #{accountCd}
+           AND year = #{year} AND month = #{month}
+    </update>
+</mapper>
