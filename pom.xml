@@ -38,7 +38,7 @@
         <commons-io.version>2.16.1</commons-io.version>
         <commons-fileupload.version>1.5</commons-fileupload.version>
         <jackson-databind.version>2.17.2</jackson-databind.version>
-        <jakarta-mail.version>2.0.1</jakarta-mail.version>
+        <jakarta-mail.version>1.6.2</jakarta-mail.version>
         <junit.version>5.10.2</junit.version>
         <assertj.version>3.25.3</assertj.version>
         <mockito.version>5.11.0</mockito.version>
@@ -184,7 +184,7 @@
         </dependency>
         <dependency>
             <groupId>com.sun.mail</groupId>
-            <artifactId>jakarta.mail</artifactId>
+            <artifactId>javax.mail</artifactId>
             <version>${jakarta-mail.version}</version>
         </dependency>
 

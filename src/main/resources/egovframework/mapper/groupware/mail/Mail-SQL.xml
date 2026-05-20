@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.mail.mapper.MailMapper">
+
+    <resultMap id="tplMap" type="egovframework.groupware.mail.service.MailTemplateVO">
+        <id property="templateId" column="template_id"/>
+        <result property="templateCd" column="template_cd"/>
+        <result property="templateNm" column="template_nm"/>
+        <result property="subject" column="subject"/>
+        <result property="bodyHtml" column="body_html"/>
+        <result property="attachTypeCd" column="attach_type_cd"/>
+        <result property="useYn" column="use_yn"/>
+    </resultMap>
+
+    <resultMap id="logMap" type="egovframework.groupware.mail.service.MailLogVO">
+        <id property="mailId" column="mail_id"/>
+        <result property="toEmail" column="to_email"/>
+        <result property="ccEmail" column="cc_email"/>
+        <result property="bccEmail" column="bcc_email"/>
+        <result property="subject" column="subject"/>
+        <result property="bodyPreview" column="body_preview"/>
+        <result property="templateCd" column="template_cd"/>
+        <result property="attachInfoJson" column="attach_info_json"/>
+        <result property="relatedEntity" column="related_entity"/>
+        <result property="relatedId" column="related_id"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="queuedAt" column="queued_at"/>
+        <result property="sentAt" column="sent_at"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="retryCnt" column="retry_cnt"/>
+    </resultMap>
+
+    <select id="findTemplate" resultMap="tplMap">
+        SELECT * FROM gw_mail_template WHERE template_cd = #{templateCd} AND use_yn = 'Y'
+    </select>
+
+    <select id="listTemplates" resultMap="tplMap">
+        SELECT * FROM gw_mail_template ORDER BY template_cd
+    </select>
+
+    <update id="updateTemplate" parameterType="egovframework.groupware.mail.service.MailTemplateVO">
+        UPDATE gw_mail_template
+           SET template_nm = #{templateNm},
+               subject = #{subject},
+               body_html = #{bodyHtml},
+               attach_type_cd = #{attachTypeCd},
+               use_yn = #{useYn},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE template_id = #{templateId}
+    </update>
+
+    <insert id="insertLog" parameterType="egovframework.groupware.mail.service.MailLogVO"
+            useGeneratedKeys="true" keyProperty="mailId" keyColumn="mail_id">
+        INSERT INTO gw_mail_log (to_email, cc_email, bcc_email, subject, body_preview,
+                                 template_cd, attach_info_json, related_entity, related_id,
+                                 status_cd, queued_at, retry_cnt)
+        VALUES (#{toEmail}, #{ccEmail}, #{bccEmail}, #{subject}, #{bodyPreview},
+                #{templateCd}, #{attachInfoJson}, #{relatedEntity}, #{relatedId},
+                'QUEUED', CURRENT_TIMESTAMP, 0)
+    </insert>
+
+    <update id="updateLogSent">
+        UPDATE gw_mail_log
+           SET status_cd = 'SENT', sent_at = CURRENT_TIMESTAMP
+         WHERE mail_id = #{mailId}
+    </update>
+
+    <update id="updateLogFailed">
+        UPDATE gw_mail_log
+           SET status_cd = 'FAILED',
+               error_message = #{errorMessage},
+               retry_cnt = #{retryCnt}
+         WHERE mail_id = #{mailId}
+    </update>
+
+    <select id="searchLogs" resultMap="logMap">
+        SELECT * FROM gw_mail_log
+         WHERE 1=1
+        <if test="status != null and status != ''">
+           AND status_cd = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(to_email) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(subject) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+         ORDER BY queued_at DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countLogs" resultType="long">
+        SELECT COUNT(*) FROM gw_mail_log
+         WHERE 1=1
+        <if test="status != null and status != ''">
+           AND status_cd = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(to_email) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(subject) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+    </select>
+</mapper>
