@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+        <property name="driverClassName" value="${db.driver}"/>
+        <property name="jdbcUrl" value="${db.url}"/>
+        <property name="username" value="${db.username}"/>
+        <property name="password" value="${db.password}"/>
+        <property name="maximumPoolSize" value="${db.pool.max:20}"/>
+        <property name="minimumIdle" value="${db.pool.min:2}"/>
+        <property name="connectionTimeout" value="30000"/>
+        <property name="idleTimeout" value="600000"/>
+        <property name="poolName" value="groupware-pool"/>
+    </bean>
+
+    <bean id="flyway" class="org.flywaydb.core.Flyway" init-method="migrate" depends-on="dataSource">
+        <constructor-arg>
+            <bean class="org.flywaydb.core.api.configuration.FluentConfiguration">
+                <property name="dataSource" ref="dataSource"/>
+                <property name="locationsAsStrings">
+                    <array>
+                        <value>${flyway.locations:classpath:db/migration}</value>
+                    </array>
+                </property>
+                <property name="baselineOnMigrate" value="true"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+</beans>

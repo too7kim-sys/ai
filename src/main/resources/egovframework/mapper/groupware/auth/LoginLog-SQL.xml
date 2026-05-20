@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.auth.mapper.LoginLogMapper">
+
+    <insert id="insert">
+        INSERT INTO gw_login_log (user_id, email_input, login_dt, ip, user_agent, success_yn, fail_reason)
+        VALUES (#{userId}, #{emailInput}, CURRENT_TIMESTAMP, #{ip}, #{userAgent}, #{successYn}, #{failReason})
+    </insert>
+</mapper>

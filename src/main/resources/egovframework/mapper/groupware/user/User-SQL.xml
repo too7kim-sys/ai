@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.user.mapper.UserMapper">
+
+    <resultMap id="userMap" type="egovframework.groupware.user.service.UserVO">
+        <id property="userId" column="user_id"/>
+        <result property="email" column="email"/>
+        <result property="passwordHash" column="password_hash"/>
+        <result property="name" column="name"/>
+        <result property="phone" column="phone"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="positionId" column="position_id"/>
+        <result property="positionNm" column="position_nm"/>
+        <result property="roleCd" column="role_cd"/>
+        <result property="roleNm" column="role_nm"/>
+        <result property="hireDate" column="hire_date"/>
+        <result property="bankCd" column="bank_cd"/>
+        <result property="bankAccount" column="bank_account"/>
+        <result property="useYn" column="use_yn"/>
+        <result property="pwdFailCnt" column="pwd_fail_cnt"/>
+        <result property="lockedYn" column="locked_yn"/>
+        <result property="lockedAt" column="locked_at"/>
+        <result property="pwdChangedAt" column="pwd_changed_at"/>
+        <result property="pwdExpireAt" column="pwd_expire_at"/>
+        <result property="lastLoginAt" column="last_login_at"/>
+        <result property="lastLoginIp" column="last_login_ip"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="userColumns">
+        u.user_id, u.email, u.password_hash, u.name, u.phone,
+        u.dept_id, d.dept_nm,
+        u.position_id, p.position_nm,
+        u.role_cd, r.role_nm,
+        u.hire_date, u.bank_cd, u.bank_account, u.use_yn,
+        u.pwd_fail_cnt, u.locked_yn, u.locked_at,
+        u.pwd_changed_at, u.pwd_expire_at,
+        u.last_login_at, u.last_login_ip,
+        u.created_at
+    </sql>
+
+    <select id="findByEmail" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.email = #{email}
+           AND u.deleted_at IS NULL
+    </select>
+
+    <select id="findById" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.user_id = #{userId}
+    </select>
+
+    <select id="search" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.deleted_at IS NULL
+           AND u.use_yn = 'Y'
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(u.name) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(u.email) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+        <if test="deptId != null">
+           AND u.dept_id = #{deptId}
+        </if>
+         ORDER BY u.name
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM gw_user u
+         WHERE u.deleted_at IS NULL
+           AND u.use_yn = 'Y'
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(u.name) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(u.email) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+        <if test="deptId != null">
+           AND u.dept_id = #{deptId}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="egovframework.groupware.user.service.UserVO"
+            useGeneratedKeys="true" keyProperty="userId" keyColumn="user_id">
+        INSERT INTO gw_user (email, password_hash, name, phone, dept_id, position_id, role_cd,
+                             hire_date, bank_cd, bank_account, use_yn, pwd_changed_at, pwd_expire_at)
+        VALUES (#{email}, #{passwordHash}, #{name}, #{phone}, #{deptId}, #{positionId}, #{roleCd},
+                #{hireDate}, #{bankCd}, #{bankAccount}, 'Y',
+                COALESCE(#{pwdChangedAt}, CURRENT_TIMESTAMP),
+                #{pwdExpireAt})
+    </insert>
+
+    <update id="update" parameterType="egovframework.groupware.user.service.UserVO">
+        UPDATE gw_user
+           SET name = #{name},
+               phone = #{phone},
+               dept_id = #{deptId},
+               position_id = #{positionId},
+               role_cd = #{roleCd},
+               bank_cd = #{bankCd},
+               bank_account = #{bankAccount},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateLoginSuccess">
+        UPDATE gw_user
+           SET last_login_at = CURRENT_TIMESTAMP,
+               last_login_ip = #{ip},
+               pwd_fail_cnt = 0
+         WHERE user_id = #{userId}
+    </update>
+
+    <update id="incrementFail">
+        UPDATE gw_user
+           SET pwd_fail_cnt = pwd_fail_cnt + 1,
+               locked_yn = CASE WHEN pwd_fail_cnt + 1 >= #{maxFail} THEN 'Y' ELSE locked_yn END,
+               locked_at = CASE WHEN pwd_fail_cnt + 1 >= #{maxFail} THEN CURRENT_TIMESTAMP ELSE locked_at END
+         WHERE email = #{email}
+    </update>
+
+    <update id="unlock">
+        UPDATE gw_user
+           SET locked_yn = 'N', locked_at = NULL, pwd_fail_cnt = 0
+         WHERE user_id = #{userId}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE gw_user
+           SET password_hash = #{passwordHash},
+               pwd_changed_at = CURRENT_TIMESTAMP
+         WHERE user_id = #{userId}
+    </update>
+</mapper>

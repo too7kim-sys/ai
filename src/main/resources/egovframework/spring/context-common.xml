@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context
+            http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/task
+            http://www.springframework.org/schema/task/spring-task.xsd">
+
+    <context:property-placeholder
+        location="classpath:application.properties,classpath:application-${spring.profiles.active:dev}.properties"
+        ignore-resource-not-found="true"
+        system-properties-mode="OVERRIDE"/>
+
+    <context:component-scan base-package="egovframework.groupware">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
+    </context:component-scan>
+
+    <bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <property name="basenames">
+            <list>
+                <value>classpath:messages/message_ko</value>
+            </list>
+        </property>
+        <property name="defaultEncoding" value="UTF-8"/>
+        <property name="cacheSeconds" value="60"/>
+    </bean>
+
+    <task:annotation-driven executor="taskExecutor" scheduler="taskScheduler"/>
+
+    <task:executor id="taskExecutor" pool-size="4-16" queue-capacity="500"/>
+    <task:executor id="mailExecutor" pool-size="2-8" queue-capacity="1000"/>
+    <task:scheduler id="taskScheduler" pool-size="4"/>
+
+    <bean class="org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor"/>
+</beans>

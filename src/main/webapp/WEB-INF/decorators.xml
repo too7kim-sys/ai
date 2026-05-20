@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+    <mapping path="/login.do" decorator="none"/>
+    <mapping path="/error/*" decorator="none"/>
+    <mapping path="/health.do" decorator="none"/>
+    <mapping path="/*" decorator="/WEB-INF/jsp/layout/decorator.jsp"/>
+</sitemesh>

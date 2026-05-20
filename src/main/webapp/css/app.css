@@ -1,0 +1,6 @@
+html, body { height: 100%; }
+.sidebar { width: 230px; min-height: calc(100vh - 56px); position: sticky; top: 0; }
+.sidebar .nav-link { color: #1f2937; padding: .5rem .75rem; border-radius: 6px; }
+.sidebar .nav-link:hover { background: #e5e7eb; }
+.content { background: #f8fafc; min-height: calc(100vh - 56px); }
+.card { border-radius: 10px; border: 0; }
