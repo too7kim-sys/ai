@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.sys.mapper.AuditLogMapper">
+
+    <resultMap id="auditMap" type="egovframework.groupware.sys.service.AuditLogVO">
+        <id property="auditId" column="audit_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="userEmail" column="user_email"/>
+        <result property="actionType" column="action_type"/>
+        <result property="entityName" column="entity_name"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="beforeJson" column="before_json"/>
+        <result property="afterJson" column="after_json"/>
+        <result property="ip" column="ip"/>
+        <result property="actionAt" column="action_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="egovframework.groupware.sys.service.AuditLogVO"
+            useGeneratedKeys="true" keyProperty="auditId" keyColumn="audit_id">
+        INSERT INTO gw_audit_log
+            (user_id, action_type, entity_name, entity_id, before_json, after_json, ip)
+        VALUES (#{userId}, #{actionType}, #{entityName}, #{entityId},
+                #{beforeJson}, #{afterJson}, #{ip})
+    </insert>
+
+    <sql id="searchWhere">
+        WHERE 1=1
+        <if test="actionType != null and actionType != ''">AND a.action_type = #{actionType}</if>
+        <if test="entityName != null and entityName != ''">AND a.entity_name = #{entityName}</if>
+        <if test="userId != null">AND a.user_id = #{userId}</if>
+        <if test="from != null">AND a.action_at &gt;= #{from}</if>
+        <if test="to != null">AND a.action_at &lt;= #{to}</if>
+    </sql>
+
+    <select id="search" resultMap="auditMap">
+        SELECT a.audit_id, a.user_id, u.name AS user_name, u.email AS user_email,
+               a.action_type, a.entity_name, a.entity_id,
+               a.before_json, a.after_json, a.ip, a.action_at
+          FROM gw_audit_log a
+          LEFT JOIN gw_user u ON u.user_id = a.user_id
+        <include refid="searchWhere"/>
+         ORDER BY a.action_at DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+          FROM gw_audit_log a
+          LEFT JOIN gw_user u ON u.user_id = a.user_id
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="distinctActionTypes" resultType="string">
+        SELECT DISTINCT action_type FROM gw_audit_log ORDER BY action_type
+    </select>
+
+    <select id="distinctEntityNames" resultType="string">
+        SELECT DISTINCT entity_name FROM gw_audit_log WHERE entity_name IS NOT NULL ORDER BY entity_name
+    </select>
+</mapper>

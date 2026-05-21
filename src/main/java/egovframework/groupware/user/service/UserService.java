@@ -20,6 +20,15 @@ public interface UserService {
 
     void unlock(Long userId);
 
+    /** 비밀번호를 새 평문으로 초기화 (해시 적용). */
+    void resetPassword(Long userId, String rawPassword);
+
+    /** Y/N. N이면 로그인 불가. */
+    void setUseYn(Long userId, String useYn);
+
+    /** 역할 코드 변경 (예: EMPLOYEE → MANAGER). */
+    void setRole(Long userId, String roleCd);
+
     List<UserVO> listByDept(Long deptId);
 
     List<UserVO> listAll();

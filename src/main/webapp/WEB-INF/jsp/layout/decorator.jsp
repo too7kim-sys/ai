@@ -88,7 +88,13 @@
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/expense/my.do"><i class="bi bi-credit-card"></i> 지출결의</a></li>
             <sec:authorize access="hasRole('ADMIN')">
             <hr class="my-2"/>
-            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/user/list.do"><i class="bi bi-gear"></i> 시스템 관리</a></li>
+            <li class="nav-item"><small class="text-muted px-3">시스템 관리</small></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/user/list.do"><i class="bi bi-people"></i> 사용자 관리</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/login-log.do"><i class="bi bi-shield-lock"></i> 로그인 이력</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/audit-log.do"><i class="bi bi-journal-text"></i> 감사 로그</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/code.do"><i class="bi bi-tags"></i> 공통 코드</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/menu.do"><i class="bi bi-list-ul"></i> 메뉴 관리</a></li>
+            <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/info.do"><i class="bi bi-info-circle"></i> 시스템 정보</a></li>
             </sec:authorize>
         </ul>
     </aside>

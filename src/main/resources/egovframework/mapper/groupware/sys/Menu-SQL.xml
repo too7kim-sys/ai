@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.sys.mapper.MenuMapper">
+
+    <resultMap id="menuMap" type="egovframework.groupware.sys.service.MenuVO">
+        <id property="menuId" column="menu_id"/>
+        <result property="menuNm" column="menu_nm"/>
+        <result property="url" column="url"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="parentNm" column="parent_nm"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="icon" column="icon"/>
+        <result property="useYn" column="use_yn"/>
+        <result property="roleCsv" column="role_csv"/>
+    </resultMap>
+
+    <select id="listMenus" resultMap="menuMap">
+        SELECT m.menu_id, m.menu_nm, m.url, m.parent_id, p.menu_nm AS parent_nm,
+               m.sort_no, m.icon, m.use_yn,
+               (SELECT STRING_AGG(mr.role_cd, ',') FROM gw_menu_role mr WHERE mr.menu_id = m.menu_id) AS role_csv
+          FROM gw_menu m
+          LEFT JOIN gw_menu p ON p.menu_id = m.parent_id
+         ORDER BY m.sort_no, m.menu_id
+    </select>
+
+    <select id="findMenu" resultMap="menuMap">
+        SELECT m.menu_id, m.menu_nm, m.url, m.parent_id, p.menu_nm AS parent_nm,
+               m.sort_no, m.icon, m.use_yn,
+               (SELECT STRING_AGG(mr.role_cd, ',') FROM gw_menu_role mr WHERE mr.menu_id = m.menu_id) AS role_csv
+          FROM gw_menu m
+          LEFT JOIN gw_menu p ON p.menu_id = m.parent_id
+         WHERE m.menu_id = #{menuId}
+    </select>
+
+    <insert id="insert" parameterType="egovframework.groupware.sys.service.MenuVO"
+            useGeneratedKeys="true" keyProperty="menuId" keyColumn="menu_id">
+        INSERT INTO gw_menu (menu_nm, url, parent_id, sort_no, icon, use_yn)
+        VALUES (#{menuNm}, #{url}, #{parentId}, COALESCE(#{sortNo}, 0),
+                #{icon}, COALESCE(#{useYn},'Y'))
+    </insert>
+
+    <update id="update">
+        UPDATE gw_menu
+           SET menu_nm = #{menuNm}, url = #{url}, parent_id = #{parentId},
+               sort_no = COALESCE(#{sortNo}, sort_no), icon = #{icon},
+               use_yn = COALESCE(#{useYn}, use_yn)
+         WHERE menu_id = #{menuId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM gw_menu WHERE menu_id = #{menuId}
+    </delete>
+
+    <select id="rolesForMenu" resultType="string">
+        SELECT role_cd FROM gw_menu_role WHERE menu_id = #{menuId} ORDER BY role_cd
+    </select>
+
+    <delete id="deleteRoles">
+        DELETE FROM gw_menu_role WHERE menu_id = #{menuId}
+    </delete>
+
+    <insert id="insertRole">
+        INSERT INTO gw_menu_role (menu_id, role_cd) VALUES (#{menuId}, #{roleCd})
+    </insert>
+</mapper>
