@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.evaluation.mapper.EvaluationMapper">
+
+    <resultMap id="periodMap" type="egovframework.groupware.evaluation.service.EvalPeriodVO">
+        <id property="periodId" column="period_id"/>
+        <result property="periodNm" column="period_nm"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="statusCd" column="status_cd"/>
+    </resultMap>
+
+    <resultMap id="formMap" type="egovframework.groupware.evaluation.service.EvalFormVO">
+        <id property="formId" column="form_id"/>
+        <result property="formNm" column="form_nm"/>
+        <result property="itemsJson" column="items_json"/>
+    </resultMap>
+
+    <resultMap id="evalMap" type="egovframework.groupware.evaluation.service.EvalVO">
+        <id property="evalId" column="eval_id"/>
+        <result property="periodId" column="period_id"/>
+        <result property="periodNm" column="period_nm"/>
+        <result property="evaluateeId" column="evaluatee_id"/>
+        <result property="evaluateeName" column="evaluatee_name"/>
+        <result property="evaluateeDept" column="evaluatee_dept"/>
+        <result property="evaluatorId" column="evaluator_id"/>
+        <result property="evaluatorName" column="evaluator_name"/>
+        <result property="scoresJson" column="scores_json"/>
+        <result property="finalScore" column="final_score"/>
+        <result property="gradeCd" column="grade_cd"/>
+        <result property="comment" column="comment"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="evalCols">
+        e.eval_id, e.period_id, p.period_nm,
+        e.evaluatee_id, ue.name AS evaluatee_name, de.dept_nm AS evaluatee_dept,
+        e.evaluator_id, ur.name AS evaluator_name,
+        e.scores_json, e.final_score, e.grade_cd, e.comment,
+        e.created_at, e.updated_at
+    </sql>
+
+    <!-- 기간 -->
+    <insert id="insertPeriod" parameterType="egovframework.groupware.evaluation.service.EvalPeriodVO"
+            useGeneratedKeys="true" keyProperty="periodId" keyColumn="period_id">
+        INSERT INTO gw_eval_period (period_nm, start_dt, end_dt, status_cd)
+        VALUES (#{periodNm}, #{startDt}, #{endDt}, COALESCE(#{statusCd}, 'PLANNED'))
+    </insert>
+
+    <update id="updatePeriodStatus">
+        UPDATE gw_eval_period SET status_cd = #{statusCd}
+         WHERE period_id = #{periodId}
+    </update>
+
+    <select id="findPeriod" resultMap="periodMap">
+        SELECT period_id, period_nm, start_dt, end_dt, status_cd
+          FROM gw_eval_period WHERE period_id = #{periodId}
+    </select>
+
+    <select id="findActivePeriod" resultMap="periodMap">
+        SELECT period_id, period_nm, start_dt, end_dt, status_cd
+          FROM gw_eval_period
+         WHERE status_cd = 'IN_PROGRESS'
+         ORDER BY start_dt DESC LIMIT 1
+    </select>
+
+    <select id="listPeriods" resultMap="periodMap">
+        SELECT period_id, period_nm, start_dt, end_dt, status_cd
+          FROM gw_eval_period
+         ORDER BY start_dt DESC
+    </select>
+
+    <!-- 양식 -->
+    <insert id="insertForm" parameterType="egovframework.groupware.evaluation.service.EvalFormVO"
+            useGeneratedKeys="true" keyProperty="formId" keyColumn="form_id">
+        INSERT INTO gw_eval_form (form_nm, items_json)
+        VALUES (#{formNm}, #{itemsJson})
+    </insert>
+
+    <select id="findForm" resultMap="formMap">
+        SELECT form_id, form_nm, items_json FROM gw_eval_form WHERE form_id = #{formId}
+    </select>
+
+    <select id="listForms" resultMap="formMap">
+        SELECT form_id, form_nm, items_json FROM gw_eval_form ORDER BY form_id DESC
+    </select>
+
+    <!-- 평가 결과 -->
+    <insert id="insertEval" parameterType="egovframework.groupware.evaluation.service.EvalVO"
+            useGeneratedKeys="true" keyProperty="evalId" keyColumn="eval_id">
+        INSERT INTO gw_eval (period_id, evaluatee_id, evaluator_id, scores_json, final_score, grade_cd, comment)
+        VALUES (#{periodId}, #{evaluateeId}, #{evaluatorId},
+                #{scoresJson}, #{finalScore}, #{gradeCd}, #{comment})
+    </insert>
+
+    <update id="updateEval">
+        UPDATE gw_eval
+           SET scores_json = #{scoresJson},
+               final_score = #{finalScore},
+               grade_cd = #{gradeCd},
+               comment = #{comment},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE eval_id = #{evalId}
+    </update>
+
+    <select id="findEval" resultMap="evalMap">
+        SELECT <include refid="evalCols"/>
+          FROM gw_eval e
+          JOIN gw_eval_period p ON p.period_id = e.period_id
+          JOIN gw_user ue ON ue.user_id = e.evaluatee_id
+          JOIN gw_user ur ON ur.user_id = e.evaluator_id
+          LEFT JOIN gw_dept de ON de.dept_id = ue.dept_id
+         WHERE e.eval_id = #{evalId}
+    </select>
+
+    <select id="findByPeriodAndPair" resultMap="evalMap">
+        SELECT <include refid="evalCols"/>
+          FROM gw_eval e
+          JOIN gw_eval_period p ON p.period_id = e.period_id
+          JOIN gw_user ue ON ue.user_id = e.evaluatee_id
+          JOIN gw_user ur ON ur.user_id = e.evaluator_id
+          LEFT JOIN gw_dept de ON de.dept_id = ue.dept_id
+         WHERE e.period_id = #{periodId}
+           AND e.evaluatee_id = #{evaluateeId}
+           AND e.evaluator_id = #{evaluatorId}
+    </select>
+
+    <select id="listByPeriod" resultMap="evalMap">
+        SELECT <include refid="evalCols"/>
+          FROM gw_eval e
+          JOIN gw_eval_period p ON p.period_id = e.period_id
+          JOIN gw_user ue ON ue.user_id = e.evaluatee_id
+          JOIN gw_user ur ON ur.user_id = e.evaluator_id
+          LEFT JOIN gw_dept de ON de.dept_id = ue.dept_id
+         WHERE e.period_id = #{periodId}
+         ORDER BY ue.dept_id, ue.name
+    </select>
+
+    <select id="listByEvaluator" resultMap="evalMap">
+        SELECT <include refid="evalCols"/>
+          FROM gw_eval e
+          JOIN gw_eval_period p ON p.period_id = e.period_id
+          JOIN gw_user ue ON ue.user_id = e.evaluatee_id
+          JOIN gw_user ur ON ur.user_id = e.evaluator_id
+          LEFT JOIN gw_dept de ON de.dept_id = ue.dept_id
+         WHERE e.period_id = #{periodId}
+           AND e.evaluator_id = #{evaluatorId}
+         ORDER BY ue.name
+    </select>
+
+    <select id="listByEvaluatee" resultMap="evalMap">
+        SELECT <include refid="evalCols"/>
+          FROM gw_eval e
+          JOIN gw_eval_period p ON p.period_id = e.period_id
+          JOIN gw_user ue ON ue.user_id = e.evaluatee_id
+          JOIN gw_user ur ON ur.user_id = e.evaluator_id
+          LEFT JOIN gw_dept de ON de.dept_id = ue.dept_id
+         WHERE e.evaluatee_id = #{evaluateeId}
+         ORDER BY p.start_dt DESC
+    </select>
+</mapper>

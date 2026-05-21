@@ -35,4 +35,8 @@ public interface UserMapper {
 
     int updatePassword(@Param("userId") Long userId,
                        @Param("passwordHash") String passwordHash);
+
+    List<UserVO> listByDept(@Param("deptId") Long deptId);
+
+    List<UserVO> listAll();
 }

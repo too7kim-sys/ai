@@ -143,4 +143,27 @@
                pwd_changed_at = CURRENT_TIMESTAMP
          WHERE user_id = #{userId}
     </update>
+
+    <select id="listByDept" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.dept_id = #{deptId}
+           AND u.deleted_at IS NULL
+           AND u.use_yn = 'Y'
+         ORDER BY COALESCE(p.level_no, 0) DESC, u.name
+    </select>
+
+    <select id="listAll" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.deleted_at IS NULL
+           AND u.use_yn = 'Y'
+         ORDER BY u.dept_id NULLS LAST, COALESCE(p.level_no, 0) DESC, u.name
+    </select>
 </mapper>

@@ -19,7 +19,7 @@
 
     <resultMap id="balMap" type="egovframework.groupware.leave.service.LeaveBalanceVO">
         <result property="userId" column="user_id"/>
-        <result property="year" column="year"/>
+        <result property="year" column="bal_year"/>
         <result property="annualGiven" column="annual_given"/>
         <result property="annualUsed" column="annual_used"/>
     </resultMap>
@@ -57,18 +57,24 @@
     </select>
 
     <select id="findBalance" resultMap="balMap">
-        SELECT * FROM gw_leave_balance WHERE user_id = #{userId} AND year = #{year}
+        SELECT user_id, bal_year, annual_given, annual_used
+          FROM gw_leave_balance WHERE user_id = #{userId} AND bal_year = #{year}
     </select>
 
     <update id="upsertBalance">
-        INSERT INTO gw_leave_balance (user_id, year, annual_given, annual_used)
-        VALUES (#{userId}, #{year}, #{given}, 0)
-        ON CONFLICT (user_id, year) DO UPDATE SET annual_given = EXCLUDED.annual_given
+        MERGE INTO gw_leave_balance t
+        USING (VALUES (#{userId}, #{year}, #{given})) AS v(user_id, bal_year, annual_given)
+           ON t.user_id = v.user_id AND t.bal_year = v.bal_year
+        WHEN MATCHED THEN
+            UPDATE SET annual_given = v.annual_given
+        WHEN NOT MATCHED THEN
+            INSERT (user_id, bal_year, annual_given, annual_used)
+            VALUES (v.user_id, v.bal_year, v.annual_given, 0)
     </update>
 
     <update id="addUsed">
         UPDATE gw_leave_balance
            SET annual_used = annual_used + #{days}, updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = #{userId} AND year = #{year}
+         WHERE user_id = #{userId} AND bal_year = #{year}
     </update>
 </mapper>

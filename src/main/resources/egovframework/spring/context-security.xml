@@ -20,6 +20,12 @@
         <intercept-url pattern="/sys/**" access="hasRole('ADMIN')"/>
         <intercept-url pattern="/payroll/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/hr/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/record.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/record/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/history.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/evaluation/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/performance/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/performance/team.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/contract/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/finance/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
         <intercept-url pattern="/vendor/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
@@ -48,7 +54,7 @@
         <access-denied-handler error-page="/error/403.do"/>
         <csrf disabled="false"/>
         <headers>
-            <hsts include-sub-domains="true" max-age-seconds="31536000"/>
+            <hsts include-subdomains="true" max-age-seconds="31536000"/>
             <frame-options policy="SAMEORIGIN"/>
         </headers>
     </http>

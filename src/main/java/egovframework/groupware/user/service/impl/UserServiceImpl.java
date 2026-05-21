@@ -72,4 +72,19 @@ public class UserServiceImpl implements UserService {
     public void unlock(Long userId) {
         userMapper.unlock(userId);
     }
+
+    @Override
+    public List<UserVO> listByDept(Long deptId) {
+        return userMapper.listByDept(deptId);
+    }
+
+    @Override
+    public List<UserVO> listAll() {
+        return userMapper.listAll();
+    }
+
+    @Override
+    public void update(UserVO vo) {
+        userMapper.update(vo);
+    }
 }

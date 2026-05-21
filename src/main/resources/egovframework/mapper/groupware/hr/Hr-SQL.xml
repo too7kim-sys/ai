@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.hr.mapper.HrMapper">
+
+    <resultMap id="deptMap" type="egovframework.groupware.hr.service.DeptVO">
+        <id property="deptId" column="dept_id"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="managerUserId" column="manager_user_id"/>
+        <result property="managerName" column="manager_name"/>
+        <result property="useYn" column="use_yn"/>
+        <result property="headcount" column="headcount"/>
+    </resultMap>
+
+    <resultMap id="positionMap" type="egovframework.groupware.hr.service.PositionVO">
+        <id property="positionId" column="position_id"/>
+        <result property="positionNm" column="position_nm"/>
+        <result property="levelNo" column="level_no"/>
+        <result property="useYn" column="use_yn"/>
+    </resultMap>
+
+    <resultMap id="recordMap" type="egovframework.groupware.hr.service.HrRecordVO">
+        <id property="recId" column="rec_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="categoryCd" column="category_cd"/>
+        <result property="categoryNm" column="category_nm"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="eventDt" column="event_dt"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="historyMap" type="egovframework.groupware.hr.service.HrHistoryVO">
+        <id property="hisId" column="his_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="changeTypeCd" column="change_type_cd"/>
+        <result property="changeTypeNm" column="change_type_nm"/>
+        <result property="beforeJson" column="before_json"/>
+        <result property="afterJson" column="after_json"/>
+        <result property="effectiveDt" column="effective_dt"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="createdBy" column="created_by"/>
+    </resultMap>
+
+    <resultMap id="familyMap" type="egovframework.groupware.hr.service.FamilyVO">
+        <id property="famId" column="fam_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="relationCd" column="relation_cd"/>
+        <result property="name" column="name"/>
+        <result property="birthDt" column="birth_dt"/>
+        <result property="dependentYn" column="dependent_yn"/>
+        <result property="elderlyYn" column="elderly_yn"/>
+        <result property="disabledYn" column="disabled_yn"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- 부서 -->
+    <select id="listAllDepts" resultMap="deptMap">
+        SELECT d.dept_id, d.dept_nm, d.parent_id, d.sort_no, d.manager_user_id, d.use_yn,
+               m.name AS manager_name,
+               (SELECT COUNT(*) FROM gw_user u
+                 WHERE u.dept_id = d.dept_id AND u.deleted_at IS NULL AND u.use_yn = 'Y') AS headcount
+          FROM gw_dept d
+          LEFT JOIN gw_user m ON m.user_id = d.manager_user_id
+         WHERE d.deleted_at IS NULL AND d.use_yn = 'Y'
+         ORDER BY COALESCE(d.parent_id, 0), d.sort_no, d.dept_id
+    </select>
+
+    <select id="findDept" resultMap="deptMap">
+        SELECT d.dept_id, d.dept_nm, d.parent_id, d.sort_no, d.manager_user_id, d.use_yn,
+               m.name AS manager_name,
+               (SELECT COUNT(*) FROM gw_user u
+                 WHERE u.dept_id = d.dept_id AND u.deleted_at IS NULL AND u.use_yn = 'Y') AS headcount
+          FROM gw_dept d
+          LEFT JOIN gw_user m ON m.user_id = d.manager_user_id
+         WHERE d.dept_id = #{deptId}
+    </select>
+
+    <!-- 직급 -->
+    <select id="listAllPositions" resultMap="positionMap">
+        SELECT position_id, position_nm, level_no, use_yn
+          FROM gw_position
+         WHERE use_yn = 'Y'
+         ORDER BY level_no
+    </select>
+
+    <!-- 인사기록 -->
+    <insert id="insertRecord" parameterType="egovframework.groupware.hr.service.HrRecordVO"
+            useGeneratedKeys="true" keyProperty="recId" keyColumn="rec_id">
+        INSERT INTO gw_hr_record (user_id, category_cd, title, content, event_dt)
+        VALUES (#{userId}, #{categoryCd}, #{title}, #{content}, #{eventDt})
+    </insert>
+
+    <delete id="deleteRecord">
+        DELETE FROM gw_hr_record WHERE rec_id = #{recId}
+    </delete>
+
+    <sql id="recordCols">
+        r.rec_id, r.user_id, u.name AS user_name,
+        r.category_cd, c.code_nm AS category_nm,
+        r.title, r.content, r.event_dt, r.created_at
+    </sql>
+
+    <select id="listRecordsByUser" resultMap="recordMap">
+        SELECT <include refid="recordCols"/>
+          FROM gw_hr_record r
+          JOIN gw_user u ON u.user_id = r.user_id
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_RECORD_CATEGORY' AND c.code_val = r.category_cd
+         WHERE r.user_id = #{userId}
+         ORDER BY r.event_dt DESC NULLS LAST, r.rec_id DESC
+    </select>
+
+    <select id="listRecentRecords" resultMap="recordMap">
+        SELECT <include refid="recordCols"/>
+          FROM gw_hr_record r
+          JOIN gw_user u ON u.user_id = r.user_id
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_RECORD_CATEGORY' AND c.code_val = r.category_cd
+         ORDER BY r.created_at DESC
+         LIMIT #{limit}
+    </select>
+
+    <!-- 인사이력 -->
+    <insert id="insertHistory" parameterType="egovframework.groupware.hr.service.HrHistoryVO"
+            useGeneratedKeys="true" keyProperty="hisId" keyColumn="his_id">
+        INSERT INTO gw_hr_history (user_id, change_type_cd, before_json, after_json, effective_dt, created_by)
+        VALUES (#{userId}, #{changeTypeCd}, #{beforeJson}, #{afterJson}, #{effectiveDt}, #{createdBy})
+    </insert>
+
+    <sql id="historyCols">
+        h.his_id, h.user_id, u.name AS user_name,
+        h.change_type_cd, c.code_nm AS change_type_nm,
+        h.before_json, h.after_json,
+        h.effective_dt, h.created_at, h.created_by
+    </sql>
+
+    <select id="listHistoryByUser" resultMap="historyMap">
+        SELECT <include refid="historyCols"/>
+          FROM gw_hr_history h
+          JOIN gw_user u ON u.user_id = h.user_id
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_CHANGE_TYPE' AND c.code_val = h.change_type_cd
+         WHERE h.user_id = #{userId}
+         ORDER BY h.effective_dt DESC, h.his_id DESC
+    </select>
+
+    <select id="listAllHistory" resultMap="historyMap">
+        SELECT <include refid="historyCols"/>
+          FROM gw_hr_history h
+          JOIN gw_user u ON u.user_id = h.user_id
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_CHANGE_TYPE' AND c.code_val = h.change_type_cd
+         WHERE 1=1
+        <if test="changeTypeCd != null and changeTypeCd != ''">
+           AND h.change_type_cd = #{changeTypeCd}
+        </if>
+         ORDER BY h.effective_dt DESC, h.his_id DESC
+         LIMIT #{limit}
+    </select>
+
+    <!-- 부양가족 -->
+    <insert id="insertFamily" parameterType="egovframework.groupware.hr.service.FamilyVO"
+            useGeneratedKeys="true" keyProperty="famId" keyColumn="fam_id">
+        INSERT INTO gw_family (user_id, relation_cd, name, birth_dt, dependent_yn, elderly_yn, disabled_yn)
+        VALUES (#{userId}, #{relationCd}, #{name}, #{birthDt},
+                COALESCE(#{dependentYn}, 'Y'),
+                COALESCE(#{elderlyYn}, 'N'),
+                COALESCE(#{disabledYn}, 'N'))
+    </insert>
+
+    <delete id="deleteFamily">
+        DELETE FROM gw_family WHERE fam_id = #{famId}
+    </delete>
+
+    <select id="listFamilyByUser" resultMap="familyMap">
+        SELECT f.fam_id, f.user_id, u.name AS user_name,
+               f.relation_cd, f.name, f.birth_dt,
+               f.dependent_yn, f.elderly_yn, f.disabled_yn, f.created_at
+          FROM gw_family f
+          JOIN gw_user u ON u.user_id = f.user_id
+         WHERE f.user_id = #{userId}
+         ORDER BY
+            CASE f.relation_cd WHEN 'SPOUSE' THEN 1 WHEN 'CHILD' THEN 2
+                               WHEN 'PARENT' THEN 3 WHEN 'SIBLING' THEN 4 ELSE 9 END,
+            f.birth_dt
+    </select>
+
+    <select id="findFamily" resultMap="familyMap">
+        SELECT f.fam_id, f.user_id, u.name AS user_name,
+               f.relation_cd, f.name, f.birth_dt,
+               f.dependent_yn, f.elderly_yn, f.disabled_yn, f.created_at
+          FROM gw_family f
+          JOIN gw_user u ON u.user_id = f.user_id
+         WHERE f.fam_id = #{famId}
+    </select>
+</mapper>

@@ -44,8 +44,17 @@
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/attendance/my.do"><i class="bi bi-clock"></i> 근태</a></li>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/payroll/my.do"><i class="bi bi-cash"></i> 급여</a></li>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/contract/my.do"><i class="bi bi-file-text"></i> 근로계약</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/hr/org.do"><i class="bi bi-diagram-3"></i> 조직도</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/hr/family.do"><i class="bi bi-people-fill"></i> 부양가족</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/evaluation/sheet.do"><i class="bi bi-graph-up"></i> 평가</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/performance/my.do"><i class="bi bi-bullseye"></i> KPI</a></li>
+            <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')">
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/performance/team.do"><i class="bi bi-people"></i> 팀 KPI</a></li>
+            </sec:authorize>
             <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
-            <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/hr/org.do"><i class="bi bi-person-vcard"></i> 인사 관리</a></li>
+            <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/hr/record.do"><i class="bi bi-journal-text"></i> 인사기록(HR)</a></li>
+            <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/hr/history.do"><i class="bi bi-clock-history"></i> 인사발령(HR)</a></li>
+            <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/evaluation/admin/periods.do"><i class="bi bi-calendar-event"></i> 평가관리(HR)</a></li>
             </sec:authorize>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/room/list.do"><i class="bi bi-door-open"></i> 회의실</a></li>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/message/inbox.do"><i class="bi bi-chat-dots"></i> 쪽지</a></li>

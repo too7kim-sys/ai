@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.performance.mapper.PerfMapper">
+
+    <resultMap id="perfMap" type="egovframework.groupware.performance.service.PerfVO">
+        <id property="perfId" column="perf_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="periodId" column="period_id"/>
+        <result property="periodNm" column="period_nm"/>
+        <result property="goal" column="goal"/>
+        <result property="kpi" column="kpi"/>
+        <result property="unit" column="unit"/>
+        <result property="targetVal" column="target_val"/>
+        <result property="actualVal" column="actual_val"/>
+        <result property="achRate" column="ach_rate"/>
+        <result property="weight" column="weight"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="perfCols">
+        f.perf_id, f.user_id, u.name AS user_name, d.dept_nm,
+        f.period_id, p.period_nm,
+        f.goal, f.kpi, f.unit,
+        f.target_val, f.actual_val, f.ach_rate, f.weight, f.created_at
+    </sql>
+
+    <insert id="insert" parameterType="egovframework.groupware.performance.service.PerfVO"
+            useGeneratedKeys="true" keyProperty="perfId" keyColumn="perf_id">
+        INSERT INTO gw_perf (user_id, period_id, goal, kpi, unit,
+                             target_val, actual_val, ach_rate, weight)
+        VALUES (#{userId}, #{periodId}, #{goal}, #{kpi}, #{unit},
+                #{targetVal}, #{actualVal}, #{achRate}, COALESCE(#{weight}, 100))
+    </insert>
+
+    <update id="update">
+        UPDATE gw_perf
+           SET goal = #{goal}, kpi = #{kpi}, unit = #{unit},
+               target_val = #{targetVal}, actual_val = #{actualVal},
+               ach_rate = #{achRate}, weight = COALESCE(#{weight}, weight)
+         WHERE perf_id = #{perfId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM gw_perf WHERE perf_id = #{perfId}
+    </delete>
+
+    <select id="findById" resultMap="perfMap">
+        SELECT <include refid="perfCols"/>
+          FROM gw_perf f
+          JOIN gw_user u ON u.user_id = f.user_id
+          JOIN gw_eval_period p ON p.period_id = f.period_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE f.perf_id = #{perfId}
+    </select>
+
+    <select id="listByUserAndPeriod" resultMap="perfMap">
+        SELECT <include refid="perfCols"/>
+          FROM gw_perf f
+          JOIN gw_user u ON u.user_id = f.user_id
+          JOIN gw_eval_period p ON p.period_id = f.period_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE f.user_id = #{userId}
+           AND f.period_id = #{periodId}
+         ORDER BY f.weight DESC, f.perf_id
+    </select>
+
+    <select id="listByDeptAndPeriod" resultMap="perfMap">
+        SELECT <include refid="perfCols"/>
+          FROM gw_perf f
+          JOIN gw_user u ON u.user_id = f.user_id
+          JOIN gw_eval_period p ON p.period_id = f.period_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE u.dept_id = #{deptId}
+           AND f.period_id = #{periodId}
+         ORDER BY u.name, f.perf_id
+    </select>
+
+    <select id="listByPeriod" resultMap="perfMap">
+        SELECT <include refid="perfCols"/>
+          FROM gw_perf f
+          JOIN gw_user u ON u.user_id = f.user_id
+          JOIN gw_eval_period p ON p.period_id = f.period_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE f.period_id = #{periodId}
+         ORDER BY u.dept_id, u.name, f.perf_id
+    </select>
+</mapper>

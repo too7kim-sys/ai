@@ -19,4 +19,10 @@ public interface UserService {
     void recordLoginFailure(String email);
 
     void unlock(Long userId);
+
+    List<UserVO> listByDept(Long deptId);
+
+    List<UserVO> listAll();
+
+    void update(UserVO vo);
 }

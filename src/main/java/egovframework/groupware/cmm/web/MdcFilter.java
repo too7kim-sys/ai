@@ -4,6 +4,7 @@ import org.slf4j.MDC;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -19,6 +20,12 @@ public class MdcFilter implements Filter {
     public static final String MDC_TRACE_ID = "traceId";
     public static final String MDC_USER_ID  = "userId";
     public static final String MDC_IP       = "ip";
+
+    @Override
+    public void init(FilterConfig filterConfig) { }
+
+    @Override
+    public void destroy() { }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

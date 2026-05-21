@@ -30,7 +30,7 @@
         <slf4j.version>2.0.13</slf4j.version>
         <jackson.version>2.17.2</jackson.version>
         <jstl.version>1.2</jstl.version>
-        <sitemesh.version>3.2.2</sitemesh.version>
+        <sitemesh.version>3.0.1</sitemesh.version>
         <bcrypt.version>0.10.2</bcrypt.version>
         <poi.version>5.2.5</poi.version>
         <openpdf.version>2.0.3</openpdf.version>
