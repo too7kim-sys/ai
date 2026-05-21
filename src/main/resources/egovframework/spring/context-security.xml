@@ -18,6 +18,9 @@
         <intercept-url pattern="/webjars/**" access="permitAll"/>
 
         <intercept-url pattern="/sys/**" access="hasRole('ADMIN')"/>
+        <intercept-url pattern="/attendance/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
+        <intercept-url pattern="/notice/write.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
+        <intercept-url pattern="/notice/delete.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/payroll/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/hr/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/hr/record.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
@@ -48,7 +51,7 @@
             logout-success-url="/login.do?logout"
             invalidate-session="true"
             delete-cookies="JSESSIONID"/>
-        <session-management invalid-session-url="/login.do?expired">
+        <session-management session-fixation-protection="newSession" invalid-session-url="/login.do?expired">
             <concurrency-control max-sessions="1" error-if-maximum-exceeded="false" expired-url="/login.do?expired"/>
         </session-management>
         <access-denied-handler error-page="/error/403.do"/>

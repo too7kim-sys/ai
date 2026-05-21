@@ -19,6 +19,20 @@
         <i class="bi bi-grid-3x3-gap-fill"></i> 사내 그룹웨어
     </a>
     <div class="d-flex align-items-center text-white-50">
+        <a class="btn btn-sm btn-outline-light me-2 position-relative"
+           href="${pageContext.request.contextPath}/notification/list.do" title="알림">
+            <i class="bi bi-bell"></i>
+            <c:if test="${unreadNotiCount > 0}">
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${unreadNotiCount}</span>
+            </c:if>
+        </a>
+        <a class="btn btn-sm btn-outline-light me-3 position-relative"
+           href="${pageContext.request.contextPath}/message/inbox.do" title="쪽지">
+            <i class="bi bi-chat-dots"></i>
+            <c:if test="${unreadMsgCount > 0}">
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark">${unreadMsgCount}</span>
+            </c:if>
+        </a>
         <span class="me-3">
             <i class="bi bi-person-circle"></i>
             <sec:authentication property="principal.user.name"/>

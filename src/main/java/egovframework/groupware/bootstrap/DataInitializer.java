@@ -1,13 +1,23 @@
 package egovframework.groupware.bootstrap;
 
+import egovframework.groupware.attendance.mapper.AttendanceMapper;
+import egovframework.groupware.attendance.service.AttendanceVO;
+import egovframework.groupware.calendar.mapper.CalendarMapper;
+import egovframework.groupware.calendar.service.CalEventVO;
 import egovframework.groupware.evaluation.mapper.EvaluationMapper;
 import egovframework.groupware.evaluation.service.EvalPeriodVO;
 import egovframework.groupware.hr.mapper.HrMapper;
 import egovframework.groupware.hr.service.FamilyVO;
 import egovframework.groupware.hr.service.HrHistoryVO;
 import egovframework.groupware.hr.service.HrRecordVO;
+import egovframework.groupware.message.mapper.MessageMapper;
+import egovframework.groupware.message.service.MessageVO;
+import egovframework.groupware.notice.mapper.NoticeMapper;
+import egovframework.groupware.notice.service.NoticeVO;
 import egovframework.groupware.performance.mapper.PerfMapper;
 import egovframework.groupware.performance.service.PerfVO;
+import egovframework.groupware.room.mapper.RoomMapper;
+import egovframework.groupware.room.service.RoomReservationVO;
 import egovframework.groupware.user.mapper.UserMapper;
 import egovframework.groupware.user.service.UserVO;
 import org.slf4j.Logger;
@@ -38,17 +48,32 @@ public class DataInitializer {
     private final HrMapper hrMapper;
     private final EvaluationMapper evaluationMapper;
     private final PerfMapper perfMapper;
+    private final NoticeMapper noticeMapper;
+    private final CalendarMapper calendarMapper;
+    private final AttendanceMapper attendanceMapper;
+    private final MessageMapper messageMapper;
+    private final RoomMapper roomMapper;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(UserMapper userMapper,
                            HrMapper hrMapper,
                            EvaluationMapper evaluationMapper,
                            PerfMapper perfMapper,
+                           NoticeMapper noticeMapper,
+                           CalendarMapper calendarMapper,
+                           AttendanceMapper attendanceMapper,
+                           MessageMapper messageMapper,
+                           RoomMapper roomMapper,
                            PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
         this.hrMapper = hrMapper;
         this.evaluationMapper = evaluationMapper;
         this.perfMapper = perfMapper;
+        this.noticeMapper = noticeMapper;
+        this.calendarMapper = calendarMapper;
+        this.attendanceMapper = attendanceMapper;
+        this.messageMapper = messageMapper;
+        this.roomMapper = roomMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -83,6 +108,7 @@ public class DataInitializer {
         log.info("Seeded 20 demo users (password: {})", DEFAULT_PWD);
 
         seedHrAndEvaluation();
+        seedCollab();
     }
 
     private void seedHrAndEvaluation() {
@@ -276,6 +302,153 @@ public class DataInitializer {
     }
 
     private String nullSafe(String s) { return s == null ? "" : s; }
+
+    private void seedCollab() {
+        log.info("Seeding notices / calendar / attendance / messages / room reservations ...");
+
+        UserVO admin = userMapper.findByEmail("admin@company.com");
+        UserVO hr = userMapper.findByEmail("hr@company.com");
+        UserVO mgrDev = userMapper.findByEmail("manager.dev1@company.com");
+        UserVO empKim = userMapper.findByEmail("emp.dev1.kim@company.com");
+        UserVO empLee = userMapper.findByEmail("emp.dev1.lee@company.com");
+        UserVO empSales = userMapper.findByEmail("emp.sales.lee@company.com");
+
+        /* === 공지 5건 === */
+        if (admin != null) seedNotice(admin.getUserId(), "Y", "ALL",
+                "🎉 2026년 새해 인사",
+                "임직원 여러분, 2026년 새해 복 많이 받으세요.\n올해도 한 해 동안 함께 큰 성과를 만들어 봅시다.");
+        if (hr != null) seedNotice(hr.getUserId(), "Y", "ALL",
+                "[HR] 2026년 연차 부여 안내",
+                "2026년 연차 15일이 일괄 부여되었습니다. /leave/balance.do 에서 확인 가능합니다.");
+        if (hr != null) seedNotice(hr.getUserId(), "N", "ALL",
+                "[HR] 1분기 평가 마감",
+                "2026년 1분기 평가가 3월 31일자로 마감되었습니다. 결과는 평가관리 메뉴에서 확인하실 수 있습니다.");
+        if (admin != null) seedNotice(admin.getUserId(), "N", "ALL",
+                "사무실 보안 점검 안내",
+                "5월 28일(목) 19:00 ~ 22:00 전사 보안 점검 진행 예정입니다.\n해당 시간에는 사내망 일시 차단이 있을 수 있습니다.");
+        if (mgrDev != null) seedNotice(mgrDev.getUserId(), "N", "DEPT",
+                "[개발1팀] 주간 회의 일정 변경",
+                "이번 주 정기 회의는 수요일 11:00로 조정합니다.");
+
+        /* === 캘린더 이벤트 === */
+        LocalDate today = LocalDate.now();
+        if (admin != null) {
+            seedEvent(admin.getUserId(), null, "COMPANY", "전사 워크샵 (분기 OKR 리뷰)",
+                    today.plusDays(7).atTime(9, 0), today.plusDays(7).atTime(18, 0), "#dc3545");
+            seedEvent(admin.getUserId(), null, "COMPANY", "보안 점검",
+                    today.plusDays(8).atTime(19, 0), today.plusDays(8).atTime(22, 0), "#fd7e14");
+        }
+        if (mgrDev != null) {
+            seedEvent(mgrDev.getUserId(), mgrDev.getDeptId(), "DEPT", "개발1팀 주간 회의",
+                    today.atTime(11, 0), today.atTime(12, 0), "#0d6efd");
+            seedEvent(mgrDev.getUserId(), mgrDev.getDeptId(), "DEPT", "스프린트 리뷰",
+                    today.plusDays(4).atTime(15, 0), today.plusDays(4).atTime(17, 0), "#0d6efd");
+        }
+        if (empKim != null) {
+            seedEvent(empKim.getUserId(), null, "PERSONAL", "1:1 매니저 미팅",
+                    today.plusDays(1).atTime(14, 0), today.plusDays(1).atTime(15, 0), "#198754");
+        }
+
+        /* === 근태 (최근 5영업일) === */
+        for (UserVO u : userMapper.listAll()) {
+            for (int back = 1; back <= 5; back++) {
+                LocalDate d = today.minusDays(back);
+                if (d.getDayOfWeek().getValue() >= 6) continue;
+                seedAttendance(u.getUserId(), d, u.getUserId() % 5 == 0);
+            }
+        }
+
+        /* === 쪽지 (몇 건 미리 주고받음) === */
+        if (hr != null && empKim != null) {
+            seedMessage(hr.getUserId(), empKim.getUserId(),
+                    "안녕하세요 김개발님, 6월 워크숍 참석 가능 여부 알려주세요.");
+        }
+        if (mgrDev != null && empKim != null) {
+            seedMessage(mgrDev.getUserId(), empKim.getUserId(),
+                    "오늘 스탠드업 후 5분 시간 가능할까요? 신규 기능 관련 논의 드릴게요.");
+        }
+        if (admin != null && hr != null) {
+            seedMessage(admin.getUserId(), hr.getUserId(),
+                    "2분기 평가 일정 확정 후 공지 부탁드립니다.");
+        }
+
+        /* === 회의실 예약 === */
+        if (mgrDev != null) {
+            seedRoomReservation(1L, mgrDev.getUserId(),
+                    today.atTime(11, 0), today.atTime(12, 0),
+                    "개발1팀 주간 회의");
+        }
+        if (empSales != null) {
+            seedRoomReservation(3L, empSales.getUserId(),
+                    today.plusDays(1).atTime(14, 0), today.plusDays(1).atTime(15, 30),
+                    "고객 미팅");
+        }
+        if (admin != null) {
+            seedRoomReservation(4L, admin.getUserId(),
+                    today.plusDays(7).atTime(9, 0), today.plusDays(7).atTime(18, 0),
+                    "전사 워크샵");
+        }
+
+        log.info("협업 모듈 시드 완료.");
+    }
+
+    private void seedNotice(Long authorId, String pinnedYn, String scope, String title, String content) {
+        NoticeVO n = new NoticeVO();
+        n.setAuthorId(authorId);
+        n.setTitle(title);
+        n.setContent(content);
+        n.setPinnedYn(pinnedYn);
+        n.setDeptScope(scope);
+        noticeMapper.insert(n);
+    }
+
+    private void seedEvent(Long ownerId, Long deptId, String scope, String title,
+                           LocalDateTime start, LocalDateTime end, String color) {
+        CalEventVO e = new CalEventVO();
+        e.setOwnerId(ownerId);
+        e.setDeptId(deptId);
+        e.setScopeCd(scope);
+        e.setTitle(title);
+        e.setStartDt(start);
+        e.setEndDt(end);
+        e.setColor(color);
+        calendarMapper.insert(e);
+    }
+
+    private void seedAttendance(Long userId, LocalDate day, boolean late) {
+        LocalDateTime checkIn = day.atTime(late ? 9 : 8, late ? 15 : 55);
+        LocalDateTime checkOut = day.atTime(18, 10);
+        AttendanceVO a = new AttendanceVO();
+        a.setUserId(userId);
+        a.setWorkDt(day);
+        a.setCheckIn(checkIn);
+        a.setStatusCd(late ? "LATE" : "NORMAL");
+        attendanceMapper.insert(a);
+        AttendanceVO saved = attendanceMapper.findByUserAndDate(userId, day);
+        int totalMin = (int) java.time.temporal.ChronoUnit.MINUTES.between(checkIn, checkOut);
+        int workMin = Math.min(480, totalMin - 60);
+        int otMin = Math.max(0, totalMin - 60 - 480);
+        attendanceMapper.updateCheckOut(saved.getAttId(), checkOut, workMin, otMin, 0, late ? "LATE" : "NORMAL");
+    }
+
+    private void seedMessage(Long senderId, Long receiverId, String content) {
+        MessageVO m = new MessageVO();
+        m.setSenderId(senderId);
+        m.setReceiverId(receiverId);
+        m.setContent(content);
+        messageMapper.insert(m);
+    }
+
+    private void seedRoomReservation(Long roomId, Long userId,
+                                     LocalDateTime start, LocalDateTime end, String purpose) {
+        RoomReservationVO r = new RoomReservationVO();
+        r.setRoomId(roomId);
+        r.setUserId(userId);
+        r.setStartDt(start);
+        r.setEndDt(end);
+        r.setPurpose(purpose);
+        roomMapper.insertReservation(r);
+    }
 
     private static List<Long> seq(long... ids) {
         return java.util.Arrays.stream(ids).boxed().toList();

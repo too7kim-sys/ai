@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.notice.mapper.NoticeMapper">
+
+    <resultMap id="noticeMap" type="egovframework.groupware.notice.service.NoticeVO">
+        <id property="noticeId" column="notice_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="authorId" column="author_id"/>
+        <result property="authorName" column="author_name"/>
+        <result property="pinnedYn" column="pinned_yn"/>
+        <result property="viewCnt" column="view_cnt"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+        <result property="deptScope" column="dept_scope"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="deletedAt" column="deleted_at"/>
+    </resultMap>
+
+    <resultMap id="commentMap" type="egovframework.groupware.notice.service.NoticeCommentVO">
+        <id property="cmtId" column="cmt_id"/>
+        <result property="noticeId" column="notice_id"/>
+        <result property="authorId" column="author_id"/>
+        <result property="authorName" column="author_name"/>
+        <result property="content" column="content"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="noticeCols">
+        n.notice_id, n.title, n.content,
+        n.author_id, u.name AS author_name,
+        n.pinned_yn, n.view_cnt, n.attach_group_id, n.dept_scope,
+        n.created_at, n.updated_at, n.deleted_at
+    </sql>
+
+    <insert id="insert" parameterType="egovframework.groupware.notice.service.NoticeVO"
+            useGeneratedKeys="true" keyProperty="noticeId" keyColumn="notice_id">
+        INSERT INTO gw_notice (title, content, author_id, pinned_yn, dept_scope, created_by)
+        VALUES (#{title}, #{content}, #{authorId},
+                COALESCE(#{pinnedYn},'N'), COALESCE(#{deptScope},'ALL'), #{authorId})
+    </insert>
+
+    <update id="update" parameterType="egovframework.groupware.notice.service.NoticeVO">
+        UPDATE gw_notice
+           SET title = #{title},
+               content = #{content},
+               pinned_yn = COALESCE(#{pinnedYn}, pinned_yn),
+               dept_scope = COALESCE(#{deptScope}, dept_scope),
+               updated_at = CURRENT_TIMESTAMP,
+               updated_by = #{authorId}
+         WHERE notice_id = #{noticeId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDelete">
+        UPDATE gw_notice
+           SET deleted_at = CURRENT_TIMESTAMP, updated_by = #{userId}
+         WHERE notice_id = #{noticeId}
+    </update>
+
+    <update id="incrementViewCnt">
+        UPDATE gw_notice SET view_cnt = view_cnt + 1 WHERE notice_id = #{noticeId}
+    </update>
+
+    <select id="findById" resultMap="noticeMap">
+        SELECT <include refid="noticeCols"/>
+          FROM gw_notice n
+          LEFT JOIN gw_user u ON u.user_id = n.author_id
+         WHERE n.notice_id = #{noticeId} AND n.deleted_at IS NULL
+    </select>
+
+    <select id="list" resultMap="noticeMap">
+        SELECT <include refid="noticeCols"/>
+          FROM gw_notice n
+          LEFT JOIN gw_user u ON u.user_id = n.author_id
+         WHERE n.deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(n.title) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(n.content) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+         ORDER BY n.pinned_yn DESC, n.created_at DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM gw_notice n WHERE n.deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(n.title) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(n.content) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+    </select>
+
+    <select id="listLatest" resultMap="noticeMap">
+        SELECT <include refid="noticeCols"/>
+          FROM gw_notice n
+          LEFT JOIN gw_user u ON u.user_id = n.author_id
+         WHERE n.deleted_at IS NULL
+         ORDER BY n.pinned_yn DESC, n.created_at DESC
+         LIMIT #{limit}
+    </select>
+
+    <insert id="insertComment" parameterType="egovframework.groupware.notice.service.NoticeCommentVO"
+            useGeneratedKeys="true" keyProperty="cmtId" keyColumn="cmt_id">
+        INSERT INTO gw_notice_comment (notice_id, author_id, content)
+        VALUES (#{noticeId}, #{authorId}, #{content})
+    </insert>
+
+    <delete id="deleteComment">
+        DELETE FROM gw_notice_comment
+         WHERE cmt_id = #{cmtId}
+           AND (author_id = #{authorId} OR #{roleCd} IN ('ADMIN','HR_MANAGER'))
+    </delete>
+
+    <select id="listComments" resultMap="commentMap">
+        SELECT c.cmt_id, c.notice_id, c.author_id, u.name AS author_name,
+               c.content, c.created_at
+          FROM gw_notice_comment c
+          LEFT JOIN gw_user u ON u.user_id = c.author_id
+         WHERE c.notice_id = #{noticeId}
+           AND c.deleted_at IS NULL
+         ORDER BY c.created_at
+    </select>
+</mapper>
