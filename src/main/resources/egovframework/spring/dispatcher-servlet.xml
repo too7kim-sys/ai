@@ -16,6 +16,8 @@
         <context:include-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
     </context:component-scan>
 
+    <!-- mvc:annotation-driven 이 자체적으로 DefaultFormattingConversionService 를 생성하므로
+         conversion-service 속성을 명시하지 않는다 (그래야 JSR-310 ISO 포맷이 자동 등록됨) -->
     <mvc:annotation-driven ignore-default-model-on-redirect="true">
         <mvc:message-converters register-defaults="true">
             <bean class="org.springframework.http.converter.StringHttpMessageConverter">

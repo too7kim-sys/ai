@@ -77,9 +77,14 @@
             <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
             <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/mail/log.do"><i class="bi bi-envelope"></i> 메일 발송 이력(HR)</a></li>
             </sec:authorize>
-            <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER')">
+            <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER','MANAGER')">
             <hr class="my-2"/>
+            <li class="nav-item"><small class="text-muted px-3">재무·회계</small></li>
+            </sec:authorize>
+            <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER')">
             <li class="nav-item"><a class="nav-link text-primary" href="${pageContext.request.contextPath}/vendor/list.do"><i class="bi bi-building"></i> 거래처</a></li>
+            </sec:authorize>
+            <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER','MANAGER')">
             <li class="nav-item"><a class="nav-link text-primary" href="${pageContext.request.contextPath}/biz-contract/list.do"><i class="bi bi-briefcase"></i> 사업자 계약</a></li>
             <li class="nav-item"><a class="nav-link text-primary" href="${pageContext.request.contextPath}/invoice/out.do"><i class="bi bi-receipt"></i> 인보이스</a></li>
             <li class="nav-item"><a class="nav-link text-primary" href="${pageContext.request.contextPath}/payment/list.do"><i class="bi bi-bank"></i> 입출금</a></li>

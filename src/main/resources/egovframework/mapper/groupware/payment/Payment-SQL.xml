@@ -3,6 +3,21 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="egovframework.groupware.payment.mapper.PaymentMapper">
 
+    <resultMap id="payMap" type="egovframework.groupware.payment.service.PaymentVO">
+        <id property="paymentId" column="payment_id"/>
+        <result property="invoiceId" column="invoice_id"/>
+        <result property="payTypeCd" column="pay_type_cd"/>
+        <result property="payDt" column="pay_dt"/>
+        <result property="amount" column="amount"/>
+        <result property="methodCd" column="method_cd"/>
+        <result property="bankCd" column="bank_cd"/>
+        <result property="bankAccount" column="bank_account"/>
+        <result property="counterpartNm" column="counterpart_nm"/>
+        <result property="memo" column="memo"/>
+        <result property="approvalDocId" column="approval_doc_id"/>
+        <result property="regUserId" column="reg_user_id"/>
+    </resultMap>
+
     <insert id="insert" parameterType="egovframework.groupware.payment.service.PaymentVO"
             useGeneratedKeys="true" keyProperty="paymentId" keyColumn="payment_id">
         INSERT INTO gw_payment (invoice_id, pay_type_cd, pay_dt, amount, method_cd,
@@ -13,4 +28,47 @@
                 #{bankCd}, #{bankAccount}, #{counterpartNm}, #{memo},
                 #{approvalDocId}, #{regUserId})
     </insert>
+
+    <delete id="delete">
+        DELETE FROM gw_payment WHERE payment_id = #{paymentId}
+    </delete>
+
+    <select id="findById" resultMap="payMap">
+        SELECT * FROM gw_payment WHERE payment_id = #{paymentId}
+    </select>
+
+    <sql id="searchWhere">
+        WHERE 1=1
+        <if test="payTypeCd != null and payTypeCd != ''">AND pay_type_cd = #{payTypeCd}</if>
+        <if test="fromDt != null">AND pay_dt &gt;= #{fromDt}</if>
+        <if test="toDt != null">AND pay_dt &lt;= #{toDt}</if>
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(counterpart_nm) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(memo) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(bank_account) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+    </sql>
+
+    <select id="search" resultMap="payMap">
+        SELECT * FROM gw_payment
+        <include refid="searchWhere"/>
+         ORDER BY pay_dt DESC, payment_id DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM gw_payment
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="findByInvoice" resultMap="payMap">
+        SELECT * FROM gw_payment WHERE invoice_id = #{invoiceId} ORDER BY pay_dt
+    </select>
+
+    <select id="sumByType" resultType="map">
+        SELECT COUNT(*) AS cnt,
+               COALESCE(SUM(amount), 0) AS total_amount
+          FROM gw_payment
+         WHERE pay_type_cd = #{payTypeCd}
+    </select>
 </mapper>
