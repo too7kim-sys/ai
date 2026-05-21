@@ -5,7 +5,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta name="theme-color" content="#1f2937"/>
     <title><sitemesh:write property='title'/> | 사내 그룹웨어</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
@@ -14,40 +15,75 @@
 </head>
 <body>
 <sec:authorize access="isAuthenticated()">
-<nav class="navbar navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="${pageContext.request.contextPath}/dashboard.do">
-        <i class="bi bi-grid-3x3-gap-fill"></i> 사내 그룹웨어
+<nav class="navbar navbar-dark bg-dark px-2 px-md-3 sticky-top">
+    <!-- 햄버거 (모바일/태블릿) -->
+    <button class="btn btn-sm btn-outline-light d-lg-none me-2" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#sideMenu" aria-controls="sideMenu">
+        <i class="bi bi-list"></i>
+    </button>
+    <a class="navbar-brand me-auto text-truncate" href="${pageContext.request.contextPath}/dashboard.do">
+        <i class="bi bi-grid-3x3-gap-fill"></i>
+        <span class="d-none d-sm-inline">사내 그룹웨어</span>
+        <span class="d-sm-none">그룹웨어</span>
     </a>
-    <div class="d-flex align-items-center text-white-50">
-        <a class="btn btn-sm btn-outline-light me-2 position-relative"
+    <div class="d-flex align-items-center">
+        <a class="btn btn-sm btn-outline-light me-1 me-md-2 position-relative"
            href="${pageContext.request.contextPath}/notification/list.do" title="알림">
             <i class="bi bi-bell"></i>
             <c:if test="${unreadNotiCount > 0}">
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${unreadNotiCount}</span>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">${unreadNotiCount}</span>
             </c:if>
         </a>
-        <a class="btn btn-sm btn-outline-light me-3 position-relative"
+        <a class="btn btn-sm btn-outline-light me-1 me-md-3 position-relative"
            href="${pageContext.request.contextPath}/message/inbox.do" title="쪽지">
             <i class="bi bi-chat-dots"></i>
             <c:if test="${unreadMsgCount > 0}">
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark">${unreadMsgCount}</span>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size:.6rem;">${unreadMsgCount}</span>
             </c:if>
         </a>
-        <span class="me-3">
+        <!-- 데스크탑: 이름·역할·로그아웃 인라인 -->
+        <span class="text-white-50 me-3 d-none d-md-inline">
             <i class="bi bi-person-circle"></i>
             <sec:authentication property="principal.user.name"/>
-            (<sec:authentication property="principal.user.roleNm"/>)
+            <small>(<sec:authentication property="principal.user.roleNm"/>)</small>
         </span>
-        <form action="${pageContext.request.contextPath}/auth/logout" method="post" class="d-inline">
+        <form action="${pageContext.request.contextPath}/auth/logout" method="post" class="d-none d-md-inline">
             <sec:csrfInput/>
             <button type="submit" class="btn btn-sm btn-outline-light">
                 <i class="bi bi-box-arrow-right"></i> 로그아웃
             </button>
         </form>
+        <!-- 모바일: 프로필 드롭다운 -->
+        <div class="dropdown d-md-none">
+            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li class="dropdown-item-text">
+                    <strong><sec:authentication property="principal.user.name"/></strong>
+                    <small class="d-block text-muted"><sec:authentication property="principal.user.roleNm"/></small>
+                </li>
+                <li><hr class="dropdown-divider"/></li>
+                <li>
+                    <form action="${pageContext.request.contextPath}/auth/logout" method="post">
+                        <sec:csrfInput/>
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="bi bi-box-arrow-right"></i> 로그아웃
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
     </div>
 </nav>
 <div class="d-flex">
-    <aside class="sidebar bg-light border-end">
+    <!-- 사이드바: lg 이상에서는 sticky, 아래에서는 offcanvas -->
+    <aside class="sidebar offcanvas-lg offcanvas-start bg-light border-end" tabindex="-1" id="sideMenu">
+        <div class="offcanvas-header d-lg-none">
+            <h5 class="offcanvas-title">메뉴</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sideMenu"></button>
+        </div>
+        <div class="offcanvas-body p-0">
         <ul class="nav flex-column p-2">
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/dashboard.do"><i class="bi bi-speedometer2"></i> 대시보드</a></li>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/user/list.do"><i class="bi bi-people"></i> 직원 디렉토리</a></li>
@@ -107,11 +143,20 @@
             <li class="nav-item"><a class="nav-link text-danger" href="${pageContext.request.contextPath}/sys/info.do"><i class="bi bi-info-circle"></i> 시스템 정보</a></li>
             </sec:authorize>
         </ul>
+        </div>
     </aside>
-    <main class="content flex-grow-1 p-4">
+    <main class="content flex-grow-1 p-2 p-md-4">
         <sitemesh:write property='body'/>
     </main>
 </div>
+<!-- 모바일 하단 빠른 액세스 -->
+<nav class="mobile-bottom-nav d-lg-none">
+    <a href="${pageContext.request.contextPath}/dashboard.do"><i class="bi bi-house"></i><span>홈</span></a>
+    <a href="${pageContext.request.contextPath}/notice/list.do"><i class="bi bi-megaphone"></i><span>공지</span></a>
+    <a href="${pageContext.request.contextPath}/attendance/my.do"><i class="bi bi-clock"></i><span>근태</span></a>
+    <a href="${pageContext.request.contextPath}/leave/my.do"><i class="bi bi-airplane"></i><span>휴가</span></a>
+    <a href="${pageContext.request.contextPath}/approval/pending.do"><i class="bi bi-file-earmark-check"></i><span>결재</span></a>
+</nav>
 </sec:authorize>
 <sec:authorize access="!isAuthenticated()">
     <sitemesh:write property='body'/>

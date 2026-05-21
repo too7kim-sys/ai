@@ -73,7 +73,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const cal = new FullCalendar.Calendar(document.getElementById('calendar'), {
         initialView: 'dayGridMonth',
         locale: 'ko',
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        headerToolbar: window.matchMedia('(max-width: 768px)').matches
+            ? { left: 'prev,next', center: 'title', right: 'dayGridMonth,listWeek' }
+            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        height: window.matchMedia('(max-width: 768px)').matches ? 'auto' : undefined,
         events: function(info, success, fail) {
             fetch(ctx + '/calendar/events.json?start=' + encodeURIComponent(info.startStr)
                 + '&end=' + encodeURIComponent(info.endStr))

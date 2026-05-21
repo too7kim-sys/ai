@@ -1,6 +1,111 @@
 html, body { height: 100%; }
-.sidebar { width: 230px; min-height: calc(100vh - 56px); position: sticky; top: 0; }
-.sidebar .nav-link { color: #1f2937; padding: .5rem .75rem; border-radius: 6px; }
+
+/* ===== 데스크탑 (>= lg, 992px) ===== */
+.sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    min-height: calc(100vh - 56px);
+}
+@media (min-width: 992px) {
+    .sidebar {
+        position: sticky;
+        top: 56px;
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+    }
+}
+.sidebar .nav-link {
+    color: #1f2937;
+    padding: .5rem .75rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
 .sidebar .nav-link:hover { background: #e5e7eb; }
-.content { background: #f8fafc; min-height: calc(100vh - 56px); }
+.sidebar .nav-link i { width: 1.25rem; display: inline-block; }
+
+/* ===== 컨텐츠 영역 ===== */
+.content {
+    background: #f8fafc;
+    min-height: calc(100vh - 56px);
+    min-width: 0;       /* flex 자식이 가로 스크롤을 만들 수 있도록 */
+}
 .card { border-radius: 10px; border: 0; }
+
+/* ===== 모바일 (< lg) ===== */
+@media (max-width: 991.98px) {
+    /* offcanvas 사이드바 너비 */
+    aside.sidebar {
+        width: 280px !important;
+        min-height: 100vh;
+    }
+    /* 모바일에서 카드 안의 테이블이 넘치면 가로 스크롤 */
+    main.content .card > .table,
+    main.content .card > table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    /* 큰 통계 숫자는 약간 축소 */
+    .display-6 { font-size: 1.5rem; }
+    h2 { font-size: 1.4rem; }
+    /* 카드/폼 패딩 축소 */
+    .card-body { padding: .75rem; }
+    /* 하단 nav가 가리지 않도록 본문 여백 */
+    main.content { padding-bottom: 70px !important; }
+}
+
+/* ===== 하단 모바일 빠른 액세스 바 ===== */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -2px 6px rgba(0,0,0,.05);
+    padding: 4px 0;
+    /* iOS safe area */
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+}
+.mobile-bottom-nav a {
+    flex: 1;
+    text-align: center;
+    color: #6b7280;
+    text-decoration: none;
+    padding: 4px 0;
+    font-size: .72rem;
+}
+.mobile-bottom-nav a i {
+    display: block;
+    font-size: 1.25rem;
+    margin-bottom: 2px;
+}
+.mobile-bottom-nav a:active,
+.mobile-bottom-nav a:hover {
+    color: #1f2937;
+    background: #f3f4f6;
+}
+
+/* ===== Tab 모바일에서 가로 스크롤 ===== */
+.nav-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.nav-tabs .nav-link { white-space: nowrap; }
+
+/* ===== 폼 모바일 최적화 (xs) ===== */
+@media (max-width: 575.98px) {
+    .btn-sm { padding: .2rem .4rem; font-size: .75rem; }
+    .form-control, .form-select { font-size: .9rem; }
+    .table { font-size: .85rem; }
+    .table th, .table td { padding: .4rem .3rem; }
+    .pagination .page-link { padding: .25rem .5rem; font-size: .85rem; }
+    .badge.rounded-pill {
+        font-size: .55rem !important;
+        padding: .2em .4em;
+    }
+}

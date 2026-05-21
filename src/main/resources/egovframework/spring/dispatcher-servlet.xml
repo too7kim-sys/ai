@@ -34,12 +34,13 @@
         </mvc:argument-resolvers>
     </mvc:annotation-driven>
 
+    <!--
+        정적 리소스는 Tomcat 기본 DefaultServlet 이 처리하도록 위임한다.
+        (mvc:resources 는 Spring 의 ResourceHttpRequestHandler 를 거쳐
+         HttpServletResponse#setContentLengthLong(long) 을 호출하는데,
+         이 메서드는 Tomcat 7(Servlet 3.0) 에 없어 NoSuchMethodError 가 발생한다.)
+    -->
     <mvc:default-servlet-handler/>
-
-    <mvc:resources mapping="/css/**" location="/css/"/>
-    <mvc:resources mapping="/js/**" location="/js/"/>
-    <mvc:resources mapping="/images/**" location="/images/"/>
-    <mvc:resources mapping="/webjars/**" location="/webjars/"/>
 
     <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="prefix" value="/WEB-INF/jsp/"/>

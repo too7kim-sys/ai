@@ -5,15 +5,34 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta name="theme-color" content="#1e3a8a"/>
     <title>로그인 | 사내 그룹웨어</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
     <style>
-        body { background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%); min-height: 100vh; display:flex; align-items:center; justify-content:center; }
-        .login-card { max-width: 420px; width: 100%; padding: 2.5rem; border-radius: 12px; background: white; box-shadow: 0 25px 50px -12px rgba(0,0,0,.3); }
+        body {
+            background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .login-card {
+            max-width: 420px;
+            width: 100%;
+            padding: 2.5rem;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,.3);
+        }
         .brand { text-align:center; margin-bottom: 2rem; }
         .brand h1 { font-size: 1.5rem; font-weight: 700; color: #1e3a8a; margin-top:.5rem; }
+        @media (max-width: 575.98px) {
+            .login-card { padding: 1.5rem; }
+            .brand h1 { font-size: 1.25rem; }
+        }
     </style>
 </head>
 <body>

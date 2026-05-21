@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+    <mapping path="/login.do" exclude="true"/>
+    <mapping path="/error/*" exclude="true"/>
+    <mapping path="/health.do" exclude="true"/>
+    <mapping path="/css/*" exclude="true"/>
+    <mapping path="/js/*" exclude="true"/>
+    <mapping path="/images/*" exclude="true"/>
+    <mapping path="/webjars/*" exclude="true"/>
+    <mapping path="/*" decorator="/WEB-INF/jsp/layout/decorator.jsp"/>
+</sitemesh>
