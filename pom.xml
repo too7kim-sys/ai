@@ -383,6 +383,7 @@
                 <configuration>
                     <port>8080</port>
                     <path>/groupware</path>
+                    <uriEncoding>UTF-8</uriEncoding>
                 </configuration>
             </plugin>
         </plugins>

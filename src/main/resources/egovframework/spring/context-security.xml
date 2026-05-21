@@ -18,6 +18,7 @@
         <intercept-url pattern="/webjars/**" access="permitAll"/>
 
         <intercept-url pattern="/sys/**" access="hasRole('ADMIN')"/>
+        <intercept-url pattern="/mail/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/attendance/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/notice/write.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/notice/delete.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>

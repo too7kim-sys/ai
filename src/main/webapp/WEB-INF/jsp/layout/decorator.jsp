@@ -72,6 +72,11 @@
             </sec:authorize>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/room/list.do"><i class="bi bi-door-open"></i> 회의실</a></li>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/message/inbox.do"><i class="bi bi-chat-dots"></i> 쪽지</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/board/list.do?boardCd=FREE"><i class="bi bi-chat-square-text"></i> 게시판</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/doc/list.do"><i class="bi bi-folder2-open"></i> 자료실</a></li>
+            <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
+            <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/mail/log.do"><i class="bi bi-envelope"></i> 메일 발송 이력(HR)</a></li>
+            </sec:authorize>
             <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER')">
             <hr class="my-2"/>
             <li class="nav-item"><a class="nav-link text-primary" href="${pageContext.request.contextPath}/vendor/list.do"><i class="bi bi-building"></i> 거래처</a></li>

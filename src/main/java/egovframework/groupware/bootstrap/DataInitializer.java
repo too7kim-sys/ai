@@ -1,15 +1,25 @@
 package egovframework.groupware.bootstrap;
 
+import egovframework.groupware.attach.service.AttachService;
+import egovframework.groupware.attach.service.AttachVO;
 import egovframework.groupware.attendance.mapper.AttendanceMapper;
 import egovframework.groupware.attendance.service.AttendanceVO;
+import egovframework.groupware.board.mapper.BoardMapper;
+import egovframework.groupware.board.service.BoardVO;
+import egovframework.groupware.board.service.PostCommentVO;
+import egovframework.groupware.board.service.PostVO;
 import egovframework.groupware.calendar.mapper.CalendarMapper;
 import egovframework.groupware.calendar.service.CalEventVO;
+import egovframework.groupware.doc.mapper.DocMapper;
+import egovframework.groupware.doc.service.DocFileVO;
 import egovframework.groupware.evaluation.mapper.EvaluationMapper;
 import egovframework.groupware.evaluation.service.EvalPeriodVO;
 import egovframework.groupware.hr.mapper.HrMapper;
 import egovframework.groupware.hr.service.FamilyVO;
 import egovframework.groupware.hr.service.HrHistoryVO;
 import egovframework.groupware.hr.service.HrRecordVO;
+import egovframework.groupware.mail.mapper.MailMapper;
+import egovframework.groupware.mail.service.MailLogVO;
 import egovframework.groupware.message.mapper.MessageMapper;
 import egovframework.groupware.message.service.MessageVO;
 import egovframework.groupware.notice.mapper.NoticeMapper;
@@ -53,6 +63,10 @@ public class DataInitializer {
     private final AttendanceMapper attendanceMapper;
     private final MessageMapper messageMapper;
     private final RoomMapper roomMapper;
+    private final BoardMapper boardMapper;
+    private final DocMapper docMapper;
+    private final MailMapper mailMapper;
+    private final AttachService attachService;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(UserMapper userMapper,
@@ -64,6 +78,10 @@ public class DataInitializer {
                            AttendanceMapper attendanceMapper,
                            MessageMapper messageMapper,
                            RoomMapper roomMapper,
+                           BoardMapper boardMapper,
+                           DocMapper docMapper,
+                           MailMapper mailMapper,
+                           AttachService attachService,
                            PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
         this.hrMapper = hrMapper;
@@ -74,6 +92,10 @@ public class DataInitializer {
         this.attendanceMapper = attendanceMapper;
         this.messageMapper = messageMapper;
         this.roomMapper = roomMapper;
+        this.boardMapper = boardMapper;
+        this.docMapper = docMapper;
+        this.mailMapper = mailMapper;
+        this.attachService = attachService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -109,6 +131,134 @@ public class DataInitializer {
 
         seedHrAndEvaluation();
         seedCollab();
+        seedBoardAndDocsAndMail();
+    }
+
+    private void seedBoardAndDocsAndMail() {
+        log.info("Seeding board posts / doc samples / mail logs ...");
+
+        UserVO admin = userMapper.findByEmail("admin@company.com");
+        UserVO hr = userMapper.findByEmail("hr@company.com");
+        UserVO mgrDev = userMapper.findByEmail("manager.dev1@company.com");
+        UserVO empKim = userMapper.findByEmail("emp.dev1.kim@company.com");
+        UserVO empLee = userMapper.findByEmail("emp.dev1.lee@company.com");
+
+        BoardVO bdFree = boardMapper.findBoardByCd("FREE");
+        BoardVO bdQna = boardMapper.findBoardByCd("QNA");
+        BoardVO bdAnon = boardMapper.findBoardByCd("VOICE");
+
+        // === 게시판 시드 ===
+        if (bdFree != null) {
+            seedPost(bdFree.getBoardId(), empKim.getUserId(), "N", "N",
+                    "🎉 5월 사내 행사 후기",
+                    "지난 주말 한강 워크샵 정말 즐거웠습니다. 좋은 시간 만들어주신 인사팀에게 감사드려요!");
+            seedPost(bdFree.getBoardId(), empLee.getUserId(), "N", "N",
+                    "점심 추천 맛집 공유",
+                    "회사 근처 새로 오픈한 일본식 라멘집 정말 맛있습니다. 한 번 가보세요.");
+            seedPost(bdFree.getBoardId(), mgrDev.getUserId(), "Y", "N",
+                    "[공지] 6월 부서 회식 일정",
+                    "6월 12일(금) 18:30, 강남 OO식당에서 6월 회식 진행합니다. 참석 여부는 댓글로 부탁드려요.");
+        }
+        if (bdQna != null) {
+            Long qid = seedPost(bdQna.getBoardId(), empKim.getUserId(), "N", "N",
+                    "GitHub Actions 사용 권한 신청은 어디서 하나요?",
+                    "사내 GitHub 조직에 GitHub Actions 사용 권한을 신청하려고 합니다. 신청 방법 안내 부탁드립니다.");
+            if (qid != null) {
+                seedComment(qid, admin.getUserId(),
+                        "헬프데스크 → '개발 도구 권한 요청' 폼으로 신청하시면 1영업일 내 처리됩니다.");
+                boardMapper.markAnswered(qid);
+            }
+            seedPost(bdQna.getBoardId(), empLee.getUserId(), "N", "N",
+                    "원격 근무 시 출퇴근 등록은 어떻게 하나요?",
+                    "재택근무일에도 그룹웨어 근태 메뉴에서 출/퇴근 버튼만 눌러주시면 정상 등록됩니다.");
+        }
+        if (bdAnon != null) {
+            seedPost(bdAnon.getBoardId(), empKim.getUserId(), "N", "Y",
+                    "회의실 예약 시간 30분 단위로 줄여주세요",
+                    "현재 1시간 단위인데, 30분 단위로 예약할 수 있으면 좋겠습니다.");
+        }
+
+        // === 자료실 시드 (텍스트 파일 작성 + 자료 등록) ===
+        try {
+            if (admin != null) {
+                seedDocFile(1L, admin.getUserId(), "2026년 사내 가이드 v1.0",
+                        "사내 시스템 사용 가이드", "guide.txt",
+                        "# 사내 시스템 가이드\n\n이 문서는 신규 입사자를 위한 사내 시스템 사용 가이드입니다.\n...");
+                seedDocFile(2L, admin.getUserId(), "휴가 신청서 양식",
+                        "휴가 신청 시 사용", "leave-form.txt",
+                        "휴가 신청서\n\n신청자: \n기간: \n사유: \n");
+                seedDocFile(3L, admin.getUserId(), "세금계산서 발행 매뉴얼",
+                        "회계팀 매뉴얼", "tax-invoice.txt",
+                        "세금계산서 발행 매뉴얼\n\n1. 거래처 정보 확인\n2. 사업자 계약서 검토\n3. ...");
+                seedDocFile(4L, admin.getUserId(), "노트북 셋업 가이드",
+                        "IT팀 매뉴얼", "laptop-setup.txt",
+                        "노트북 셋업 가이드\n\n1. Windows 업데이트\n2. 사내 인증서 설치\n3. ...");
+            }
+        } catch (Exception e) {
+            log.warn("자료실 시드 실패: {}", e.getMessage());
+        }
+
+        // === 메일 로그 시드 (다양한 상태) ===
+        seedMail("admin@company.com", "[시스템 점검] 그룹웨어 정기 점검 안내", "SENT", null);
+        seedMail("hr@company.com", "[HR] 2026년 1분기 평가 마감 안내", "SENT", "EVAL_REMINDER");
+        seedMail("emp.dev1.kim@company.com", "[휴가] 휴가 신청 결재 완료", "SENT", "LEAVE_APPROVED");
+        seedMail("emp.dev1.lee@company.com", "[근태] 지각 누계 안내", "QUEUED", null);
+        seedMail("ex-employee@old-company.com", "[휴가] 잔여 연차 안내", "FAILED",
+                "LEAVE_REMINDER");
+    }
+
+    private Long seedPost(Long boardId, Long authorId, String pinnedYn, String anonymousYn,
+                          String title, String content) {
+        PostVO p = new PostVO();
+        p.setBoardId(boardId);
+        p.setAuthorId(authorId);
+        p.setPinnedYn(pinnedYn);
+        p.setAnonymousYn(anonymousYn);
+        p.setTitle(title);
+        p.setContent(content);
+        boardMapper.insertPost(p);
+        return p.getPostId();
+    }
+
+    private void seedComment(Long postId, Long authorId, String content) {
+        PostCommentVO c = new PostCommentVO();
+        c.setPostId(postId);
+        c.setAuthorId(authorId);
+        c.setContent(content);
+        c.setAnonymousYn("N");
+        boardMapper.insertComment(c);
+    }
+
+    /**
+     * 자료실 시드용 텍스트 파일을 storeBytes 로 저장하고 doc 등록.
+     */
+    private void seedDocFile(Long folderId, Long ownerId, String title, String desc,
+                             String filename, String content) throws java.io.IOException {
+        Long groupId = attachService.createGroup("DOC", folderId.toString());
+        AttachVO att = attachService.storeBytes(groupId, filename, "text/plain",
+                content.getBytes(java.nio.charset.StandardCharsets.UTF_8), ownerId);
+        DocFileVO doc = new DocFileVO();
+        doc.setFolderId(folderId);
+        doc.setAttachId(att.getAttachId());
+        doc.setTitle(title);
+        doc.setDescription(desc);
+        doc.setOwnerId(ownerId);
+        docMapper.insertFile(doc);
+    }
+
+    private void seedMail(String toEmail, String subject, String status, String templateCd) {
+        MailLogVO log = new MailLogVO();
+        log.setToEmail(toEmail);
+        log.setSubject(subject);
+        log.setBodyPreview(subject.length() > 100 ? subject.substring(0, 100) : subject);
+        log.setTemplateCd(templateCd);
+        log.setStatusCd(status);
+        log.setRetryCnt("FAILED".equals(status) ? 3 : 0);
+        if ("FAILED".equals(status)) log.setErrorMessage("SMTP 550: 수신자 도메인이 존재하지 않습니다");
+        mailMapper.insertLog(log);
+        if ("SENT".equals(status)) {
+            mailMapper.updateLogSent(log.getMailId());
+        }
     }
 
     private void seedHrAndEvaluation() {

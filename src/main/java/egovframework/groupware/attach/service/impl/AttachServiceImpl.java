@@ -1,0 +1,126 @@
+package egovframework.groupware.attach.service.impl;
+
+import egovframework.groupware.attach.mapper.AttachMapper;
+import egovframework.groupware.attach.service.AttachService;
+import egovframework.groupware.attach.service.AttachVO;
+import egovframework.groupware.cmm.ApiException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+@Service
+public class AttachServiceImpl implements AttachService, InitializingBean {
+
+    private static final Logger log = LoggerFactory.getLogger(AttachServiceImpl.class);
+
+    private final AttachMapper mapper;
+    private final Path baseDir;
+
+    public AttachServiceImpl(AttachMapper mapper,
+                             @Value("${storage.local.path}") String baseDir) {
+        this.mapper = mapper;
+        this.baseDir = Paths.get(baseDir);
+    }
+
+    @Override
+    public void afterPropertiesSet() throws IOException {
+        Files.createDirectories(baseDir);
+        log.info("File storage base directory: {}", baseDir);
+    }
+
+    @Override
+    @Transactional
+    public Long createGroup(String ownerEntity, String ownerEntityId) {
+        mapper.insertGroup(ownerEntity, ownerEntityId);
+        return mapper.lastGroupId();
+    }
+
+    @Override
+    @Transactional
+    public AttachVO store(Long groupId, MultipartFile file, Long userId) throws IOException {
+        if (file == null || file.isEmpty()) return null;
+        String origName = Objects.requireNonNullElse(file.getOriginalFilename(), "untitled");
+        return persist(groupId, origName, file.getContentType(),
+                file.getSize(),
+                dest -> file.transferTo(dest.toFile()),
+                userId);
+    }
+
+    @Override
+    @Transactional
+    public AttachVO storeBytes(Long groupId, String fileNm, String mimeType,
+                               byte[] content, Long userId) throws IOException {
+        if (content == null || content.length == 0) return null;
+        return persist(groupId, fileNm, mimeType, (long) content.length,
+                dest -> Files.write(dest, content),
+                userId);
+    }
+
+    private AttachVO persist(Long groupId, String origName, String mimeType, long size,
+                             FileWriter writer, Long userId) throws IOException {
+        if (groupId == null) throw new ApiException("INVALID", "그룹이 없습니다");
+
+        String ext = "";
+        int dot = origName.lastIndexOf('.');
+        if (dot > -1 && dot < origName.length() - 1) ext = origName.substring(dot);
+
+        String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        Path dir = baseDir.resolve(datePart);
+        Files.createDirectories(dir);
+
+        String stored = UUID.randomUUID().toString().replace("-", "") + ext;
+        Path dest = dir.resolve(stored);
+        writer.write(dest);
+
+        AttachVO vo = new AttachVO();
+        vo.setGroupId(groupId);
+        vo.setFileNm(origName);
+        vo.setStoredNm(stored);
+        vo.setFileSize(size);
+        vo.setMimeType(mimeType);
+        vo.setStorageType("LOCAL");
+        vo.setStoredPath(datePart + "/" + stored);
+        vo.setCreatedBy(userId);
+        mapper.insert(vo);
+        return vo;
+    }
+
+    @FunctionalInterface
+    private interface FileWriter {
+        void write(Path dest) throws IOException;
+    }
+
+    @Override public AttachVO findById(Long attachId) { return mapper.findById(attachId); }
+    @Override public List<AttachVO> findByGroup(Long groupId) { return mapper.findByGroup(groupId); }
+
+    @Override
+    public Path resolvePath(AttachVO vo) {
+        if (vo == null || vo.getStoredPath() == null)
+            throw new ApiException("NOT_FOUND", "파일이 없습니다");
+        return baseDir.resolve(vo.getStoredPath());
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long attachId) throws IOException {
+        AttachVO vo = mapper.findById(attachId);
+        if (vo == null) return;
+        Path p = resolvePath(vo);
+        Files.deleteIfExists(p);
+        mapper.delete(attachId);
+    }
+}
