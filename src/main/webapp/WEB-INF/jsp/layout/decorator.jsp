@@ -91,6 +91,11 @@
             <li class="nav-item"><a class="nav-link text-primary" href="${pageContext.request.contextPath}/finance/ar.do"><i class="bi bi-bar-chart"></i> 재무 대시보드</a></li>
             </sec:authorize>
             <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/expense/my.do"><i class="bi bi-credit-card"></i> 지출결의</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/asset/my.do"><i class="bi bi-laptop"></i> 내 자산</a></li>
+            <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/vehicle/list.do"><i class="bi bi-car-front"></i> 차량 예약</a></li>
+            <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
+            <li class="nav-item"><a class="nav-link text-success" href="${pageContext.request.contextPath}/asset/list.do"><i class="bi bi-list-check"></i> 자산 관리(HR)</a></li>
+            </sec:authorize>
             <sec:authorize access="hasRole('ADMIN')">
             <hr class="my-2"/>
             <li class="nav-item"><small class="text-muted px-3">시스템 관리</small></li>

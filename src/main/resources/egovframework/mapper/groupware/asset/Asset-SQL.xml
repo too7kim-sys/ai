@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.asset.mapper.AssetMapper">
+
+    <resultMap id="assetMap" type="egovframework.groupware.asset.service.AssetVO">
+        <id property="assetId" column="asset_id"/>
+        <result property="assetNo" column="asset_no"/>
+        <result property="assetNm" column="asset_nm"/>
+        <result property="categoryCd" column="category_cd"/>
+        <result property="brand" column="brand"/>
+        <result property="modelNm" column="model_nm"/>
+        <result property="serialNo" column="serial_no"/>
+        <result property="purchaseDt" column="purchase_dt"/>
+        <result property="purchaseAmount" column="purchase_amount"/>
+        <result property="depreciationMonths" column="depreciation_months"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="assignedUserId" column="assigned_user_id"/>
+        <result property="assignedUserName" column="assigned_user_name"/>
+        <result property="assignedUserDept" column="assigned_user_dept"/>
+        <result property="assignedDt" column="assigned_dt"/>
+        <result property="location" column="location"/>
+        <result property="memo" column="memo"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="historyMap" type="egovframework.groupware.asset.service.AssetHistoryVO">
+        <id property="historyId" column="history_id"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="assetNo" column="asset_no"/>
+        <result property="actionCd" column="action_cd"/>
+        <result property="actorId" column="actor_id"/>
+        <result property="actorName" column="actor_name"/>
+        <result property="targetUserId" column="target_user_id"/>
+        <result property="targetUserName" column="target_user_name"/>
+        <result property="actionDt" column="action_dt"/>
+        <result property="beforeStatus" column="before_status"/>
+        <result property="afterStatus" column="after_status"/>
+        <result property="memo" column="memo"/>
+    </resultMap>
+
+    <sql id="assetCols">
+        a.asset_id, a.asset_no, a.asset_nm, a.category_cd, a.brand, a.model_nm, a.serial_no,
+        a.purchase_dt, a.purchase_amount, a.depreciation_months, a.status_cd,
+        a.assigned_user_id, u.name AS assigned_user_name, d.dept_nm AS assigned_user_dept,
+        a.assigned_dt, a.location, a.memo, a.created_at
+    </sql>
+
+    <insert id="insert" parameterType="egovframework.groupware.asset.service.AssetVO"
+            useGeneratedKeys="true" keyProperty="assetId" keyColumn="asset_id">
+        INSERT INTO gw_asset
+            (asset_no, asset_nm, category_cd, brand, model_nm, serial_no,
+             purchase_dt, purchase_amount, depreciation_months, status_cd,
+             assigned_user_id, assigned_dt, location, memo, created_by)
+        VALUES (#{assetNo}, #{assetNm}, #{categoryCd}, #{brand}, #{modelNm}, #{serialNo},
+                #{purchaseDt}, COALESCE(#{purchaseAmount}, 0),
+                COALESCE(#{depreciationMonths}, 36),
+                COALESCE(#{statusCd},'IN_STOCK'),
+                #{assignedUserId}, #{assignedDt}, #{location}, #{memo}, #{createdBy})
+    </insert>
+
+    <update id="update">
+        UPDATE gw_asset
+           SET asset_nm = #{assetNm}, category_cd = #{categoryCd},
+               brand = #{brand}, model_nm = #{modelNm}, serial_no = #{serialNo},
+               purchase_dt = #{purchaseDt}, purchase_amount = #{purchaseAmount},
+               depreciation_months = #{depreciationMonths},
+               location = #{location}, memo = #{memo},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE asset_id = #{assetId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDelete">
+        UPDATE gw_asset SET deleted_at = CURRENT_TIMESTAMP WHERE asset_id = #{assetId}
+    </update>
+
+    <update id="updateAssignment">
+        UPDATE gw_asset
+           SET assigned_user_id = #{userId},
+               assigned_dt = #{assignedDt},
+               status_cd = #{statusCd},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE asset_id = #{assetId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE gw_asset SET status_cd = #{statusCd}, updated_at = CURRENT_TIMESTAMP
+         WHERE asset_id = #{assetId}
+    </update>
+
+    <select id="findById" resultMap="assetMap">
+        SELECT <include refid="assetCols"/>
+          FROM gw_asset a
+          LEFT JOIN gw_user u ON u.user_id = a.assigned_user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE a.asset_id = #{assetId} AND a.deleted_at IS NULL
+    </select>
+
+    <sql id="searchWhere">
+        WHERE a.deleted_at IS NULL
+        <if test="categoryCd != null and categoryCd != ''">AND a.category_cd = #{categoryCd}</if>
+        <if test="statusCd != null and statusCd != ''">AND a.status_cd = #{statusCd}</if>
+        <if test="assignedUserId != null">AND a.assigned_user_id = #{assignedUserId}</if>
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(a.asset_no) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(a.asset_nm) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(COALESCE(a.serial_no,'')) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(COALESCE(u.name,'')) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+    </sql>
+
+    <select id="search" resultMap="assetMap">
+        SELECT <include refid="assetCols"/>
+          FROM gw_asset a
+          LEFT JOIN gw_user u ON u.user_id = a.assigned_user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+        <include refid="searchWhere"/>
+         ORDER BY a.asset_id DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM gw_asset a
+          LEFT JOIN gw_user u ON u.user_id = a.assigned_user_id
+        <include refid="searchWhere"/>
+    </select>
+
+    <insert id="insertHistory" parameterType="egovframework.groupware.asset.service.AssetHistoryVO"
+            useGeneratedKeys="true" keyProperty="historyId" keyColumn="history_id">
+        INSERT INTO gw_asset_history
+            (asset_id, action_cd, actor_id, target_user_id, before_status, after_status, memo)
+        VALUES (#{assetId}, #{actionCd}, #{actorId}, #{targetUserId},
+                #{beforeStatus}, #{afterStatus}, #{memo})
+    </insert>
+
+    <select id="findHistory" resultMap="historyMap">
+        SELECT h.history_id, h.asset_id, a.asset_no,
+               h.action_cd, h.actor_id, ua.name AS actor_name,
+               h.target_user_id, ut.name AS target_user_name,
+               h.action_dt, h.before_status, h.after_status, h.memo
+          FROM gw_asset_history h
+          JOIN gw_asset a ON a.asset_id = h.asset_id
+          LEFT JOIN gw_user ua ON ua.user_id = h.actor_id
+          LEFT JOIN gw_user ut ON ut.user_id = h.target_user_id
+         WHERE h.asset_id = #{assetId}
+         ORDER BY h.action_dt DESC
+    </select>
+
+    <select id="countByStatus" resultType="map">
+        SELECT status_cd AS status_cd, COUNT(*) AS cnt,
+               COALESCE(SUM(purchase_amount), 0) AS total_amount
+          FROM gw_asset
+         WHERE deleted_at IS NULL
+         GROUP BY status_cd
+    </select>
+
+    <select id="countByCategory" resultType="map">
+        SELECT category_cd AS category_cd, COUNT(*) AS cnt,
+               COALESCE(SUM(purchase_amount), 0) AS total_amount
+          FROM gw_asset
+         WHERE deleted_at IS NULL
+         GROUP BY category_cd
+         ORDER BY cnt DESC
+    </select>
+</mapper>
