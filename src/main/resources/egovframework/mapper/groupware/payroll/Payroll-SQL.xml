@@ -34,6 +34,8 @@
         <result property="userName" column="user_name"/>
         <result property="deptNm" column="dept_nm"/>
         <result property="email" column="email"/>
+        <result property="bankCd" column="bank_cd"/>
+        <result property="bankAccount" column="bank_account"/>
         <result property="payMonth" column="pay_month"/>
         <result property="contractId" column="contract_id"/>
         <result property="workDays" column="work_days"/>
@@ -126,7 +128,8 @@
     </select>
 
     <select id="listPayrolls" resultMap="payrollMap">
-        SELECT p.*, u.name AS user_name, d.dept_nm, u.email
+        SELECT p.*, u.name AS user_name, d.dept_nm, u.email,
+               u.bank_cd, u.bank_account
           FROM gw_payroll p
           JOIN gw_user u ON u.user_id = p.user_id
           LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
@@ -222,4 +225,32 @@
                updated_at = CURRENT_TIMESTAMP
          WHERE pay_id = #{payId}
     </update>
+
+    <!-- 근태 자동 집계 (급여 산정 시 연장/야간/휴일·근무일·결근일 자동 반영) -->
+    <select id="sumAttendance" resultType="map">
+        SELECT
+            COALESCE(SUM(ot_min), 0)     AS ot_min,
+            COALESCE(SUM(night_min), 0)  AS night_min,
+            COALESCE(SUM(holiday_min), 0) AS holiday_min,
+            COUNT(*)                      AS work_days,
+            COALESCE(SUM(CASE WHEN status_cd = 'ABSENT' THEN 1 ELSE 0 END), 0) AS absent_days
+          FROM gw_attendance
+         WHERE user_id = #{userId}
+           AND work_dt BETWEEN #{from} AND #{to}
+    </select>
+
+    <!-- 부서별 인건비 통계 -->
+    <select id="sumByDept" resultType="map">
+        SELECT d.dept_nm AS dept_nm,
+               COUNT(*)                       AS cnt,
+               COALESCE(SUM(p.gross_pay), 0)      AS gross_total,
+               COALESCE(SUM(p.deduction_total), 0) AS deduction_total,
+               COALESCE(SUM(p.net_pay), 0)        AS net_total
+          FROM gw_payroll p
+          JOIN gw_user u ON u.user_id = p.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.pay_month = #{payMonth}
+         GROUP BY d.dept_nm
+         ORDER BY net_total DESC
+    </select>
 </mapper>

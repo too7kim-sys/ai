@@ -23,6 +23,10 @@ import egovframework.groupware.mail.service.MailLogVO;
 import egovframework.groupware.message.mapper.MessageMapper;
 import egovframework.groupware.message.service.MessageVO;
 import egovframework.groupware.notice.mapper.NoticeMapper;
+import egovframework.groupware.payroll.mapper.BonusMapper;
+import egovframework.groupware.payroll.mapper.PayrollMapper;
+import egovframework.groupware.payroll.service.BonusVO;
+import egovframework.groupware.payroll.service.SalaryContractVO;
 import egovframework.groupware.notice.service.NoticeVO;
 import egovframework.groupware.performance.mapper.PerfMapper;
 import egovframework.groupware.performance.service.PerfVO;
@@ -66,6 +70,8 @@ public class DataInitializer {
     private final BoardMapper boardMapper;
     private final DocMapper docMapper;
     private final MailMapper mailMapper;
+    private final PayrollMapper payrollMapper;
+    private final BonusMapper bonusMapper;
     private final AttachService attachService;
     private final PasswordEncoder passwordEncoder;
 
@@ -81,6 +87,8 @@ public class DataInitializer {
                            BoardMapper boardMapper,
                            DocMapper docMapper,
                            MailMapper mailMapper,
+                           PayrollMapper payrollMapper,
+                           BonusMapper bonusMapper,
                            AttachService attachService,
                            PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
@@ -95,6 +103,8 @@ public class DataInitializer {
         this.boardMapper = boardMapper;
         this.docMapper = docMapper;
         this.mailMapper = mailMapper;
+        this.payrollMapper = payrollMapper;
+        this.bonusMapper = bonusMapper;
         this.attachService = attachService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -132,6 +142,66 @@ public class DataInitializer {
         seedHrAndEvaluation();
         seedCollab();
         seedBoardAndDocsAndMail();
+        seedSalaryContracts();
+    }
+
+    /**
+     * 전 직원 표준 연봉계약 시드.
+     * Flyway 마이그레이션이 아니라 여기서 처리하는 이유: 사용자 20명은
+     * 이 DataInitializer 가 만들므로, Flyway 실행 시점에는 gw_user 가 비어 있다.
+     */
+    private void seedSalaryContracts() {
+        log.info("Seeding salary contracts ...");
+        int n = 0;
+        for (UserVO u : userMapper.listAll()) {
+            int positionLevel = u.getPositionId() == null ? 1 : u.getPositionId().intValue();
+            long annual = switch (positionLevel) {
+                case 2 -> 38_000_000L;
+                case 3 -> 45_000_000L;
+                case 4 -> 55_000_000L;
+                case 5 -> 68_000_000L;
+                case 6 -> 85_000_000L;
+                case 7 -> 95_000_000L;
+                default -> 32_000_000L;
+            };
+            annual += switch (nullSafe(u.getRoleCd())) {
+                case "ADMIN"           -> 12_000_000L;
+                case "HR_MANAGER"      -> 8_000_000L;
+                case "FINANCE_MANAGER" -> 8_000_000L;
+                case "MANAGER"         -> 5_000_000L;
+                default                -> 0L;
+            };
+            SalaryContractVO sc = new SalaryContractVO();
+            sc.setUserId(u.getUserId());
+            sc.setStartDt(u.getHireDate() != null ? u.getHireDate() : LocalDate.of(2024, 1, 1));
+            sc.setAnnualSalary(BigDecimal.valueOf(annual));
+            sc.setMonthlyBaseSal(BigDecimal.valueOf(annual / 12));
+            sc.setDivisionTypeCd("12");
+            sc.setPaymentDay(25);
+            sc.setNote("표준 연봉계약 (시드)");
+            payrollMapper.insertContract(sc);
+            n++;
+        }
+        log.info("Seeded {} salary contracts.", n);
+
+        // 일반 직원에게 당월 명절상여 예시 (PLANNED) — 급여 산정 시 자동 반영 데모용
+        String thisMonth = java.time.YearMonth.now().toString();
+        int b = 0;
+        for (UserVO u : userMapper.listAll()) {
+            if (!"EMPLOYEE".equals(u.getRoleCd())) continue;
+            BonusVO bonus = new BonusVO();
+            bonus.setPayMonth(thisMonth);
+            bonus.setBonusTypeCd("HOLIDAY");
+            bonus.setUserId(u.getUserId());
+            bonus.setAmount(BigDecimal.valueOf(500_000));
+            bonus.setTaxableYn("Y");
+            bonus.setMemo("명절 상여 (시드)");
+            bonus.setStatusCd("PLANNED");
+            bonus.setCreatedBy(1L);
+            bonusMapper.insert(bonus);
+            b++;
+        }
+        log.info("Seeded {} bonus rows.", b);
     }
 
     private void seedBoardAndDocsAndMail() {

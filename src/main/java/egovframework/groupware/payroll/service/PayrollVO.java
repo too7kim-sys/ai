@@ -17,6 +17,8 @@ public class PayrollVO extends BaseVO {
     private String userName;
     private String deptNm;
     private String email;
+    private String bankCd;
+    private String bankAccount;
     private String payMonth;
     private Long contractId;
     private BigDecimal workDays;

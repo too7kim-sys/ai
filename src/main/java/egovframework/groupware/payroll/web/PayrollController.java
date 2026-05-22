@@ -1,20 +1,19 @@
 package egovframework.groupware.payroll.web;
 
 import egovframework.groupware.auth.security.CustomUserDetails;
+import egovframework.groupware.cmm.web.DownloadSupport;
 import egovframework.groupware.payroll.service.PayrollService;
 import egovframework.groupware.payroll.service.PayrollVO;
 import egovframework.groupware.payroll.service.SalaryContractVO;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -53,16 +52,13 @@ public class PayrollController {
     }
 
     @GetMapping("/payroll/my/pdf.do")
-    public ResponseEntity<byte[]> myPdf(@AuthenticationPrincipal CustomUserDetails me,
-                                        @RequestParam String payMonth) {
+    public void myPdf(@AuthenticationPrincipal CustomUserDetails me,
+                      @RequestParam String payMonth,
+                      HttpServletResponse resp) throws IOException {
         PayrollVO p = payrollService.findByUserAndMonth(me.getUserId(), payMonth);
-        if (p == null) return ResponseEntity.notFound().build();
+        if (p == null) { resp.sendError(404); return; }
         byte[] pdf = payrollService.generatePayslipPdf(p.getPayId());
-        String fname = URLEncoder.encode("급여명세서-" + payMonth + ".pdf", StandardCharsets.UTF_8);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fname)
-            .contentType(MediaType.APPLICATION_PDF)
-            .body(pdf);
+        DownloadSupport.write(resp, "급여명세서-" + payMonth + ".pdf", "application/pdf", pdf);
     }
 
     /* ======================= 관리자 화면 ======================= */
@@ -88,8 +84,62 @@ public class PayrollController {
         model.addAttribute("list", list);
         model.addAttribute("payMonth", payMonth);
         model.addAttribute("status", status);
+        model.addAttribute("deptSummary", payrollService.deptCostSummary(payMonth));
         return "payroll/admin-list";
     }
+
+    /** 급여대장 CSV 다운로드. */
+    @GetMapping("/payroll/admin/export.do")
+    @PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")
+    public void exportCsv(@RequestParam String payMonth, HttpServletResponse resp) throws IOException {
+        List<PayrollVO> list = payrollService.listPayrolls(payMonth, null, 0, 1000);
+        StringBuilder sb = new StringBuilder("﻿"); // UTF-8 BOM (엑셀 한글)
+        sb.append("급여월,부서,성명,과세,비과세,지급총액,공제총액,실수령액,상태\n");
+        for (PayrollVO p : list) {
+            sb.append(payMonth).append(',')
+              .append(csv(p.getDeptNm())).append(',')
+              .append(csv(p.getUserName())).append(',')
+              .append(n(p.getTaxablePay())).append(',')
+              .append(n(p.getNonTaxablePay())).append(',')
+              .append(n(p.getGrossPay())).append(',')
+              .append(n(p.getDeductionTotal())).append(',')
+              .append(n(p.getNetPay())).append(',')
+              .append(csv(p.getStatusCd())).append('\n');
+        }
+        DownloadSupport.write(resp, "급여대장-" + payMonth + ".csv",
+                "text/csv; charset=UTF-8", sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** 급여이체 집계파일 — 확정/지급 상태 명세의 은행·계좌·실수령액. */
+    @GetMapping("/payroll/admin/transfer-file.do")
+    @PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")
+    public void transferFile(@RequestParam String payMonth, HttpServletResponse resp) throws IOException {
+        List<PayrollVO> list = payrollService.listPayrolls(payMonth, null, 0, 1000);
+        StringBuilder sb = new StringBuilder("﻿");
+        sb.append("은행코드,계좌번호,예금주,이체금액,적요\n");
+        long total = 0;
+        int cnt = 0;
+        for (PayrollVO p : list) {
+            if (!"CONFIRMED".equals(p.getStatusCd()) && !"PAID".equals(p.getStatusCd())) continue;
+            long amt = p.getNetPay() == null ? 0 : p.getNetPay().longValueExact();
+            sb.append(csv(p.getBankCd())).append(',')
+              .append(csv(p.getBankAccount())).append(',')
+              .append(csv(p.getUserName())).append(',')
+              .append(amt).append(',')
+              .append(payMonth).append(" 급여\n");
+            total += amt; cnt++;
+        }
+        sb.append(",,합계 ").append(cnt).append("건,").append(total).append(",\n");
+        DownloadSupport.write(resp, "급여이체-" + payMonth + ".csv",
+                "text/csv; charset=UTF-8", sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String csv(String s) {
+        if (s == null) return "";
+        if (s.contains(",") || s.contains("\"")) return "\"" + s.replace("\"", "\"\"") + "\"";
+        return s;
+    }
+    private static long n(BigDecimal v) { return v == null ? 0 : v.longValueExact(); }
 
     @GetMapping("/payroll/admin/edit.do")
     @PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")

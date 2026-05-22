@@ -4,6 +4,7 @@ import egovframework.groupware.cmm.ApiException;
 import egovframework.groupware.mail.service.MailAttachment;
 import egovframework.groupware.mail.service.MailRequest;
 import egovframework.groupware.mail.service.MailService;
+import egovframework.groupware.payroll.mapper.BonusMapper;
 import egovframework.groupware.payroll.mapper.PayrollMapper;
 import egovframework.groupware.payroll.service.*;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,13 +24,16 @@ import java.util.Map;
 public class PayrollServiceImpl implements PayrollService {
 
     private final PayrollMapper mapper;
+    private final BonusMapper bonusMapper;
     private final PayslipPdfWriter pdfWriter;
     private final MailService mailService;
     private final PayrollCalculator calculator = new PayrollCalculator();
     private static final NumberFormat WON = NumberFormat.getNumberInstance(Locale.KOREA);
 
-    public PayrollServiceImpl(PayrollMapper mapper, PayslipPdfWriter pdfWriter, MailService mailService) {
+    public PayrollServiceImpl(PayrollMapper mapper, BonusMapper bonusMapper,
+                              PayslipPdfWriter pdfWriter, MailService mailService) {
         this.mapper = mapper;
+        this.bonusMapper = bonusMapper;
         this.pdfWriter = pdfWriter;
         this.mailService = mailService;
     }
@@ -74,12 +79,19 @@ public class PayrollServiceImpl implements PayrollService {
         PayrollVO p = mapper.findPayroll(payId);
         List<InsuranceRateVO> rates = mapper.findActiveRates(LocalDate.now());
 
+        // 1) 근태 자동 집계 — 해당 급여월의 연장/야간/휴일 분, 근무일/결근일
+        applyAttendance(p);
+
+        // 2) 수동 입력 + 해당 월 상여(PLANNED)를 지급 항목으로 병합
+        Map<String, Long> payments = new HashMap<>(manualPayments == null ? Map.of() : manualPayments);
+        mergeBonuses(p, payments);
+
         PayrollCalculator.Input in = new PayrollCalculator.Input()
                 .baseSalary(base)
                 .overtime(nzi(p.getOtMin()), nzi(p.getNightMin()), nzi(p.getHolidayMin()))
                 .family(1, 0)
                 .withRates(rates);
-        for (Map.Entry<String, Long> e : manualPayments.entrySet()) {
+        for (Map.Entry<String, Long> e : payments.entrySet()) {
             in.manual(e.getKey(), BigDecimal.valueOf(e.getValue()));
         }
         PayrollCalculator.Result res = calculator.calculate(in);
@@ -101,6 +113,42 @@ public class PayrollServiceImpl implements PayrollService {
         return findPayrollWithDetails(payId);
     }
 
+    /** 급여월의 근태 데이터를 집계해 PayrollVO 의 연장/야간/휴일·근무일·결근일에 반영. */
+    private void applyAttendance(PayrollVO p) {
+        if (p.getPayMonth() == null) return;
+        YearMonth ym = YearMonth.parse(p.getPayMonth());
+        Map<String, Object> agg = mapper.sumAttendance(
+                p.getUserId(), ym.atDay(1), ym.atEndOfMonth());
+        if (agg == null) return;
+        p.setOtMin(toInt(agg.get("ot_min")));
+        p.setNightMin(toInt(agg.get("night_min")));
+        p.setHolidayMin(toInt(agg.get("holiday_min")));
+        int workDays = toInt(agg.get("work_days"));
+        if (workDays > 0) p.setWorkDays(BigDecimal.valueOf(workDays));
+        p.setAbsentDays(BigDecimal.valueOf(toInt(agg.get("absent_days"))));
+    }
+
+    /** 해당 급여월의 PLANNED 상여를 지급 코드별 금액으로 병합 (REGULAR_BONUS/HOLIDAY_BONUS/PERFORMANCE_BONUS). */
+    private void mergeBonuses(PayrollVO p, Map<String, Long> payments) {
+        if (p.getPayMonth() == null) return;
+        for (BonusVO b : bonusMapper.findPlannedByUserMonth(p.getUserId(), p.getPayMonth())) {
+            String code = switch (b.getBonusTypeCd()) {
+                case "HOLIDAY"     -> "HOLIDAY_BONUS";
+                case "PERFORMANCE" -> "PERFORMANCE_BONUS";
+                case "SPECIAL"     -> "ETC_ALLOW";
+                default            -> "REGULAR_BONUS";
+            };
+            long amt = b.getAmount() == null ? 0 : b.getAmount().longValueExact();
+            payments.merge(code, amt, Long::sum);
+        }
+    }
+
+    private int toInt(Object o) {
+        if (o == null) return 0;
+        if (o instanceof Number n) return n.intValue();
+        try { return Integer.parseInt(o.toString()); } catch (Exception e) { return 0; }
+    }
+
     @Override
     public PayrollVO findPayroll(Long payId) { return mapper.findPayroll(payId); }
 
@@ -120,12 +168,22 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     @Override
+    public List<Map<String, Object>> deptCostSummary(String payMonth) {
+        return mapper.sumByDept(payMonth);
+    }
+
+    @Override
     public List<PayrollVO> listMyPayrolls(Long userId) { return mapper.listMyPayrolls(userId); }
 
     @Override
     @Transactional
     public void confirm(Long payId) {
+        PayrollVO p = mapper.findPayroll(payId);
         mapper.updateStatus(payId, "CONFIRMED", null);
+        // 확정 시 반영된 상여를 APPLIED 로 마킹
+        if (p != null && p.getPayMonth() != null) {
+            bonusMapper.markApplied(p.getUserId(), p.getPayMonth());
+        }
     }
 
     @Override

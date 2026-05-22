@@ -20,6 +20,9 @@ public interface PayrollService {
 
     long countPayrolls(String payMonth, String status);
 
+    /** 부서별 인건비 통계 (급여대장). */
+    List<Map<String, Object>> deptCostSummary(String payMonth);
+
     List<PayrollVO> listMyPayrolls(Long userId);
 
     void confirm(Long payId);

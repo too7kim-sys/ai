@@ -4,10 +4,34 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <title>급여 산정 (${payMonth})</title>
-<div class="d-flex justify-content-between mb-3">
-    <h2><i class="bi bi-cash-stack"></i> ${payMonth} 급여 산정</h2>
-    <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/payroll/admin/period.do"><i class="bi bi-plus"></i> 신규 산정</a>
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+    <h2><i class="bi bi-cash-stack"></i> ${payMonth} 급여대장</h2>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/payroll/admin/export.do?payMonth=${payMonth}">
+            <i class="bi bi-file-earmark-spreadsheet"></i> 급여대장 CSV
+        </a>
+        <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/payroll/admin/transfer-file.do?payMonth=${payMonth}">
+            <i class="bi bi-bank"></i> 이체파일
+        </a>
+        <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/payroll/admin/period.do"><i class="bi bi-plus"></i> 신규 산정</a>
+    </div>
 </div>
+
+<!-- 부서별 인건비 요약 -->
+<c:if test="${not empty deptSummary}">
+<div class="row g-2 mb-3">
+    <c:forEach var="d" items="${deptSummary}">
+        <div class="col-6 col-md-3">
+            <div class="card"><div class="card-body py-2">
+                <div class="widget-label">${empty d.dept_nm ? '미지정' : d.dept_nm} · ${d.cnt}명</div>
+                <div class="fw-bold" style="font-size:1.05rem;"><fmt:formatNumber value="${d.net_total}" type="number"/> 원</div>
+                <small class="text-muted">지급 <fmt:formatNumber value="${d.gross_total}" type="number"/></small>
+            </div></div>
+        </div>
+    </c:forEach>
+</div>
+</c:if>
+
 <form method="get" class="d-flex gap-2 mb-3">
     <input type="month" name="payMonth" value="${payMonth}" class="form-control" style="max-width:200px"/>
     <select name="status" class="form-select" style="max-width:200px">

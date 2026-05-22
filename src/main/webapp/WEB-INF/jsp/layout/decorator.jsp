@@ -43,6 +43,10 @@
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/hr/record.do"><i class="bi bi-journal-text"></i><span>인사기록 (HR)</span></a></li>
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/hr/history.do"><i class="bi bi-clock-history"></i><span>인사발령 (HR)</span></a></li>
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/evaluation/admin/periods.do"><i class="bi bi-calendar-event"></i><span>평가관리 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/list.do"><i class="bi bi-cash-stack"></i><span>급여대장 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/bonus.do"><i class="bi bi-gift"></i><span>상여 관리 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/year-end.do"><i class="bi bi-receipt-cutoff"></i><span>연말정산 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/severance.do"><i class="bi bi-box-arrow-right"></i><span>퇴직정산 (HR)</span></a></li>
             </sec:authorize>
 
             <li class="menu-title">근태 · 결재</li>

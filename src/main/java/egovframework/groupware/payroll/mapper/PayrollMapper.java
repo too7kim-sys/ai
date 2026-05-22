@@ -10,11 +10,20 @@ import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface PayrollMapper {
 
     List<InsuranceRateVO> findActiveRates(@Param("on") LocalDate on);
+
+    /** 해당 기간 근태 집계 (연장/야간/휴일 분, 근무일/결근일). */
+    Map<String, Object> sumAttendance(@Param("userId") Long userId,
+                                      @Param("from") LocalDate from,
+                                      @Param("to") LocalDate to);
+
+    /** 부서별 인건비 통계 (급여대장 화면용). */
+    List<Map<String, Object>> sumByDept(@Param("payMonth") String payMonth);
 
     SalaryContractVO findCurrentContract(@Param("userId") Long userId,
                                          @Param("on") LocalDate on);
