@@ -55,7 +55,8 @@ public class CalendarController {
                     "scope", e.getScopeCd(),
                     "owner", e.getOwnerName() == null ? "" : e.getOwnerName(),
                     "dept", e.getDeptNm() == null ? "" : e.getDeptNm(),
-                    "memo", e.getMemo() == null ? "" : e.getMemo()
+                    "memo", e.getMemo() == null ? "" : e.getMemo(),
+                    "recurring", e.getRepeatGroupId() != null
             ));
             out.add(m);
         }
@@ -70,7 +71,9 @@ public class CalendarController {
                        @RequestParam String endDt,
                        @RequestParam(required = false) String scopeCd,
                        @RequestParam(required = false) String color,
-                       @RequestParam(required = false) String memo) {
+                       @RequestParam(required = false) String memo,
+                       @RequestParam(required = false) String repeatType,
+                       @RequestParam(required = false) String repeatUntil) {
         CalEventVO vo = new CalEventVO();
         vo.setEvtId(evtId);
         vo.setTitle(title);
@@ -80,15 +83,24 @@ public class CalendarController {
         vo.setColor(color);
         vo.setMemo(memo);
         if ("DEPT".equals(scopeCd)) vo.setDeptId(me.getDeptId());
-        if (evtId == null) service.create(vo, me.getUserId());
-        else service.update(vo, me.getUserId(), me.getRoleCd());
+        if (evtId != null) {
+            service.update(vo, me.getUserId(), me.getRoleCd());
+        } else if (repeatType != null && !repeatType.isBlank() && !"NONE".equals(repeatType)
+                && repeatUntil != null && !repeatUntil.isBlank()) {
+            service.createRecurring(vo, repeatType,
+                    java.time.LocalDate.parse(repeatUntil), me.getUserId());
+        } else {
+            service.create(vo, me.getUserId());
+        }
         return "redirect:/calendar/main.do";
     }
 
     @PostMapping("/calendar/delete.do")
     public String delete(@AuthenticationPrincipal CustomUserDetails me,
-                         @RequestParam Long evtId) {
-        service.delete(evtId, me.getUserId());
+                         @RequestParam Long evtId,
+                         @RequestParam(required = false, defaultValue = "false") boolean deleteSeries) {
+        if (deleteSeries) service.deleteSeries(evtId, me.getUserId());
+        else service.delete(evtId, me.getUserId());
         return "redirect:/calendar/main.do";
     }
 

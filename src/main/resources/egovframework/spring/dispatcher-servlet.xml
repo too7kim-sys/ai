@@ -42,6 +42,11 @@
     -->
     <mvc:default-servlet-handler/>
 
+    <!-- PRG(POST→redirect) 응답에 작업 결과 토스트 메시지를 자동 부여 -->
+    <mvc:interceptors>
+        <bean class="egovframework.groupware.cmm.web.FlashMessageInterceptor"/>
+    </mvc:interceptors>
+
     <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="prefix" value="/WEB-INF/jsp/"/>
         <property name="suffix" value=".jsp"/>

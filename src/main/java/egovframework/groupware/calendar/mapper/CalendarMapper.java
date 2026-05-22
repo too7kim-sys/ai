@@ -13,6 +13,7 @@ public interface CalendarMapper {
     int insert(CalEventVO vo);
     int update(CalEventVO vo);
     int softDelete(@Param("evtId") Long evtId, @Param("userId") Long userId);
+    int softDeleteSeries(@Param("repeatGroupId") Long repeatGroupId, @Param("userId") Long userId);
 
     CalEventVO findById(@Param("evtId") Long evtId);
 

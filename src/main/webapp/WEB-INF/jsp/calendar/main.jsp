@@ -49,6 +49,17 @@
             </div>
             <div class="mb-2"><label class="form-label">메모</label>
                 <textarea name="memo" id="memo" class="form-control" rows="3"></textarea></div>
+            <div class="row g-2" id="repeatRow">
+                <div class="col-md-6"><label class="form-label">반복</label>
+                    <select name="repeatType" id="repeatType" class="form-select">
+                        <option value="NONE">반복 안 함</option>
+                        <option value="DAILY">매일</option>
+                        <option value="WEEKLY">매주</option>
+                        <option value="MONTHLY">매월</option>
+                    </select></div>
+                <div class="col-md-6"><label class="form-label">반복 종료일</label>
+                    <input type="date" name="repeatUntil" id="repeatUntil" class="form-control"/></div>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-outline-danger me-auto" id="deleteBtn" style="display:none;"
@@ -63,6 +74,7 @@
 <form id="deleteForm" method="post" action="${pageContext.request.contextPath}/calendar/delete.do" style="display:none;">
     <sec:csrfInput/>
     <input type="hidden" name="evtId" id="deleteEvtId"/>
+    <input type="hidden" name="deleteSeries" id="deleteSeries" value="false"/>
 </form>
 
 <script>
@@ -99,6 +111,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('memo').value = e.extendedProps.memo || '';
             document.getElementById('modalTitle').textContent = '일정 수정';
             document.getElementById('deleteBtn').style.display = 'inline-block';
+            // 수정 시에는 반복 옵션 숨김 (반복 일정은 신규 생성에서만 설정)
+            document.getElementById('repeatRow').style.display = 'none';
+            document.getElementById('deleteBtn').dataset.recurring = e.extendedProps.recurring ? '1' : '';
             modal.show();
         }
     });
@@ -110,12 +125,23 @@ function resetForm() {
     document.getElementById('memo').value = '';
     document.getElementById('scopeCd').value = 'PERSONAL';
     document.getElementById('color').value = '#0d6efd';
+    document.getElementById('repeatType').value = 'NONE';
+    document.getElementById('repeatUntil').value = '';
     document.getElementById('modalTitle').textContent = '새 일정';
     document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('deleteBtn').dataset.recurring = '';
+    document.getElementById('repeatRow').style.display = '';
 }
 function deleteEvent() {
-    if (!confirm('일정을 삭제하시겠습니까?')) return;
+    var recurring = document.getElementById('deleteBtn').dataset.recurring === '1';
+    var series = false;
+    if (recurring) {
+        series = confirm('반복 일정입니다.\n[확인] 반복 일정 전체 삭제 / [취소] 이 일정만 삭제');
+    } else {
+        if (!confirm('일정을 삭제하시겠습니까?')) return;
+    }
     document.getElementById('deleteEvtId').value = document.getElementById('evtId').value;
+    document.getElementById('deleteSeries').value = series ? 'true' : 'false';
     document.getElementById('deleteForm').submit();
 }
 </script>

@@ -15,6 +15,7 @@
         <result property="deptNm" column="dept_nm"/>
         <result property="color" column="color"/>
         <result property="memo" column="memo"/>
+        <result property="repeatGroupId" column="repeat_group_id"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
@@ -22,15 +23,15 @@
         e.evt_id, e.title, e.start_dt, e.end_dt, e.scope_cd,
         e.owner_id, u.name AS owner_name,
         e.dept_id, d.dept_nm,
-        e.color, e.memo, e.created_at
+        e.color, e.memo, e.repeat_group_id, e.created_at
     </sql>
 
     <insert id="insert" parameterType="egovframework.groupware.calendar.service.CalEventVO"
             useGeneratedKeys="true" keyProperty="evtId" keyColumn="evt_id">
         INSERT INTO gw_cal_event (title, start_dt, end_dt, scope_cd,
-                                  owner_id, dept_id, color, memo, created_by)
+                                  owner_id, dept_id, color, memo, repeat_group_id, created_by)
         VALUES (#{title}, #{startDt}, #{endDt}, COALESCE(#{scopeCd},'PERSONAL'),
-                #{ownerId}, #{deptId}, #{color}, #{memo}, #{ownerId})
+                #{ownerId}, #{deptId}, #{color}, #{memo}, #{repeatGroupId}, #{ownerId})
     </insert>
 
     <update id="update">
@@ -45,6 +46,13 @@
     <update id="softDelete">
         UPDATE gw_cal_event SET deleted_at = CURRENT_TIMESTAMP
          WHERE evt_id = #{evtId}
+           AND (owner_id = #{userId} OR scope_cd = 'COMPANY')
+    </update>
+
+    <update id="softDeleteSeries">
+        UPDATE gw_cal_event SET deleted_at = CURRENT_TIMESTAMP
+         WHERE repeat_group_id = #{repeatGroupId}
+           AND deleted_at IS NULL
            AND (owner_id = #{userId} OR scope_cd = 'COMPANY')
     </update>
 

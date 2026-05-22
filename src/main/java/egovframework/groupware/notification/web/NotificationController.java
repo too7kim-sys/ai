@@ -33,11 +33,26 @@ public class NotificationController {
         return "notification/list";
     }
 
+    /**
+     * 토픽바 알림 폴링용 — 미읽음 수 + 최근 알림 목록.
+     * 화면(decorator.jsp)이 주기적으로 호출해 뱃지·드롭다운을 실시간 갱신한다.
+     */
     @GetMapping("/notification/unread-count.do")
     @ResponseBody
     public Map<String, Object> unreadCount(@AuthenticationPrincipal CustomUserDetails me) {
         Map<String, Object> out = new HashMap<>();
         out.put("unread", service.countUnread(me.getUserId()));
+        List<Map<String, Object>> recent = new java.util.ArrayList<>();
+        for (NotificationVO n : service.findByUser(me.getUserId(), false, 6)) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("title", n.getTitle());
+            m.put("typeCd", n.getTypeCd());
+            m.put("linkUrl", n.getLinkUrl());
+            m.put("read", n.getReadAt() != null);
+            m.put("createdAt", n.getCreatedAt() == null ? "" : n.getCreatedAt().toString());
+            recent.add(m);
+        }
+        out.put("recent", recent);
         return out;
     }
 

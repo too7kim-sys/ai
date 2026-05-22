@@ -140,16 +140,15 @@
                 <div class="dropdown">
                     <button class="topbar-icon" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" title="알림">
                         <i class="bi bi-bell"></i>
-                        <c:if test="${unreadNotiCount > 0}">
-                            <span class="topbar-badge badge rounded-pill bg-danger">${unreadNotiCount}</span>
-                        </c:if>
+                        <span class="topbar-badge badge rounded-pill bg-danger" id="notiBadge"
+                              <c:if test="${unreadNotiCount == 0}">style="display:none"</c:if>>${unreadNotiCount}</span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end shadow notif-dropdown">
                         <div class="notif-head d-flex justify-content-between align-items-center">
                             <strong>알림</strong>
-                            <span class="badge bg-soft-danger">${unreadNotiCount} 신규</span>
+                            <span class="badge bg-soft-danger"><span id="notiHeadCount">${unreadNotiCount}</span> 신규</span>
                         </div>
-                        <div class="notif-body">
+                        <div class="notif-body" id="notiBody">
                             <c:forEach var="n" items="${topbarNotifications}">
                                 <a class="notif-item ${empty n.readAt ? 'unread' : ''}"
                                    href="${pageContext.request.contextPath}<c:choose><c:when test='${not empty n.linkUrl}'>${n.linkUrl}</c:when><c:otherwise>/notification/list.do</c:otherwise></c:choose>">
@@ -223,6 +222,22 @@
             <sitemesh:write property='body'/>
         </main>
 
+        <%-- 작업 결과 토스트 (PRG 피드백) --%>
+        <c:if test="${not empty flashMsg}">
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1200">
+            <div id="flashToast" class="toast align-items-center text-bg-${empty flashType ? 'success' : flashType} border-0"
+                 role="alert" data-bs-delay="3500">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi ${flashType eq 'danger' ? 'bi-exclamation-triangle' : 'bi-check-circle'} me-1"></i>
+                        <c:out value="${flashMsg}"/>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+        </c:if>
+
         <footer class="app-footer">
             &copy; 2026 사내 그룹웨어 · eGovFrame 기반 통합 업무 시스템
         </footer>
@@ -243,5 +258,90 @@
 </sec:authorize>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="${pageContext.request.contextPath}/js/app.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('flashToast');
+        if (el && window.bootstrap) new bootstrap.Toast(el).show();
+    });
+
+    // ===== 알림 자동 갱신 (near-real-time) — 30초 주기 폴링 =====
+    (function () {
+        var ctx = '${pageContext.request.contextPath}';
+        var badge = document.getElementById('notiBadge');
+        var headCount = document.getElementById('notiHeadCount');
+        var body = document.getElementById('notiBody');
+        if (!badge) return;
+        var lastUnread = parseInt(badge.textContent || '0', 10) || 0;
+
+        function ensureToastContainer() {
+            var c = document.querySelector('.toast-container');
+            if (!c) {
+                c = document.createElement('div');
+                c.className = 'toast-container position-fixed top-0 end-0 p-3';
+                c.style.zIndex = '1200';
+                document.body.appendChild(c);
+            }
+            return c;
+        }
+        function notifyToast(added) {
+            if (!window.bootstrap) return;
+            var c = ensureToastContainer();
+            var t = document.createElement('div');
+            t.className = 'toast align-items-center text-bg-primary border-0';
+            var d = document.createElement('div'); d.className = 'd-flex';
+            var b = document.createElement('div'); b.className = 'toast-body';
+            b.textContent = '🔔 새 알림 ' + added + '건이 도착했습니다.';
+            var btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'btn-close btn-close-white me-2 m-auto';
+            btn.setAttribute('data-bs-dismiss', 'toast');
+            d.appendChild(b); d.appendChild(btn); t.appendChild(d); c.appendChild(t);
+            new bootstrap.Toast(t, { delay: 6000 }).show();
+            t.addEventListener('hidden.bs.toast', function () { t.remove(); });
+        }
+        function renderRecent(recent) {
+            if (!body) return;
+            body.textContent = '';
+            if (!recent || recent.length === 0) {
+                var empty = document.createElement('div');
+                empty.className = 'text-center text-muted py-4 small';
+                empty.textContent = '알림이 없습니다.';
+                body.appendChild(empty);
+                return;
+            }
+            recent.forEach(function (n) {
+                var a = document.createElement('a');
+                a.className = 'notif-item' + (n.read ? '' : ' unread');
+                a.href = ctx + (n.linkUrl ? n.linkUrl : '/notification/list.do');
+                var dot = document.createElement('span'); dot.className = 'notif-dot';
+                var txt = document.createElement('span'); txt.className = 'notif-text';
+                var ttl = document.createElement('span');
+                ttl.className = 'd-block text-truncate';
+                ttl.textContent = n.title || '';
+                var sub = document.createElement('small');
+                sub.className = 'text-muted';
+                sub.textContent = (n.typeCd || '') + ' · ' + (n.createdAt || '').replace('T', ' ').substring(0, 16);
+                txt.appendChild(ttl); txt.appendChild(sub);
+                a.appendChild(dot); a.appendChild(txt);
+                body.appendChild(a);
+            });
+        }
+        function poll() {
+            fetch(ctx + '/notification/unread-count.do', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data) return;
+                    var n = data.unread || 0;
+                    if (n > 0) { badge.textContent = n; badge.style.display = ''; }
+                    else { badge.style.display = 'none'; }
+                    if (headCount) headCount.textContent = n;
+                    if (n > lastUnread) notifyToast(n - lastUnread);
+                    lastUnread = n;
+                    renderRecent(data.recent);
+                })
+                .catch(function () { /* 네트워크 일시 오류는 무시 */ });
+        }
+        setInterval(poll, 30000);
+    })();
+</script>
 </body>
 </html>

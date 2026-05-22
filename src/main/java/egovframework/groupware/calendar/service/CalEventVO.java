@@ -21,4 +21,6 @@ public class CalEventVO extends BaseVO {
     private String deptNm;
     private String color;
     private String memo;
+    /** 반복 일정 묶음 식별자 (단건 일정은 null). */
+    private Long repeatGroupId;
 }

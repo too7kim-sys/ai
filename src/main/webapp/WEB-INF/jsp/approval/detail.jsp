@@ -25,7 +25,23 @@
 
 <div class="card mb-3">
     <div class="card-header bg-light"><i class="bi bi-card-text"></i> 본문</div>
-    <pre class="card-body mb-0" style="white-space:pre-wrap; word-break:break-all;">${d.contentJson}</pre>
+    <c:choose>
+        <c:when test="${contentFields != null and not empty contentFields}">
+            <table class="table mb-0">
+                <tbody>
+                <c:forEach var="f" items="${contentFields}">
+                    <tr>
+                        <th class="bg-light" style="width:160px;"><c:out value="${f.key}"/></th>
+                        <td style="white-space:pre-wrap; word-break:break-all;"><c:out value="${f.value}"/></td>
+                    </tr>
+                </c:forEach>
+                </tbody>
+            </table>
+        </c:when>
+        <c:otherwise>
+            <pre class="card-body mb-0" style="white-space:pre-wrap; word-break:break-all;"><c:out value="${d.contentJson}"/></pre>
+        </c:otherwise>
+    </c:choose>
 </div>
 
 <div class="card mb-3">
