@@ -51,7 +51,7 @@
                     <tr>
                         <td>${h.effectiveDt}</td>
                         <td><span class="badge bg-info">${h.changeTypeNm != null ? h.changeTypeNm : h.changeTypeCd}</span></td>
-                        <td class="small text-muted">${h.beforeJson} → ${h.afterJson}</td>
+                        <td class="small text-muted">${h.beforeText} <i class="bi bi-arrow-right"></i> <span class="text-success">${h.afterText}</span></td>
                     </tr>
                 </c:forEach>
                 <c:if test="${empty histories}">

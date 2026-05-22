@@ -40,5 +40,51 @@
             }
         });
         if (best) best.classList.add('active');
+
+        // ----- 다크 / 라이트 모드 -----
+        var themeToggle = document.getElementById('themeToggle');
+        var themeIcon = document.getElementById('themeIcon');
+
+        function applyTheme(mode) {
+            if (mode === 'dark') {
+                body.classList.add('dark-mode');
+                if (themeIcon) themeIcon.className = 'bi bi-sun';
+            } else {
+                body.classList.remove('dark-mode');
+                if (themeIcon) themeIcon.className = 'bi bi-moon-stars';
+            }
+        }
+        applyTheme(localStorage.getItem('gw-theme') || 'light');
+
+        if (themeToggle) {
+            themeToggle.addEventListener('click', function () {
+                var next = body.classList.contains('dark-mode') ? 'light' : 'dark';
+                localStorage.setItem('gw-theme', next);
+                applyTheme(next);
+            });
+        }
+
+        // ----- 전체화면 -----
+        var fsToggle = document.getElementById('fullscreenToggle');
+        var fsIcon = document.getElementById('fullscreenIcon');
+
+        if (fsToggle) {
+            fsToggle.addEventListener('click', function () {
+                if (!document.fullscreenElement) {
+                    (document.documentElement.requestFullscreen
+                        || document.documentElement.webkitRequestFullscreen
+                        || function () {}).call(document.documentElement);
+                } else {
+                    (document.exitFullscreen || document.webkitExitFullscreen
+                        || function () {}).call(document);
+                }
+            });
+            document.addEventListener('fullscreenchange', function () {
+                if (fsIcon) {
+                    fsIcon.className = document.fullscreenElement
+                        ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
+                }
+            });
+        }
     });
 })();

@@ -92,9 +92,58 @@ public class HrServiceImpl implements HrService {
         return vo.getHisId();
     }
 
-    @Override public List<HrHistoryVO> findHistoryByUser(Long userId) { return hrMapper.listHistoryByUser(userId); }
+    @Override public List<HrHistoryVO> findHistoryByUser(Long userId) {
+        return decorateHistory(hrMapper.listHistoryByUser(userId));
+    }
     @Override public List<HrHistoryVO> findAllHistory(String changeTypeCd, int limit) {
-        return hrMapper.listAllHistory(changeTypeCd, limit > 0 ? limit : 200);
+        return decorateHistory(hrMapper.listAllHistory(changeTypeCd, limit > 0 ? limit : 200));
+    }
+
+    /** 각 이력의 before/after JSON 을 사람이 읽을 수 있는 요약 텍스트로 변환한다. */
+    private List<HrHistoryVO> decorateHistory(List<HrHistoryVO> list) {
+        if (list == null || list.isEmpty()) return list;
+        Map<Long, String> deptNm = new java.util.HashMap<>();
+        for (DeptVO d : hrMapper.listAllDepts()) deptNm.put(d.getDeptId(), d.getDeptNm());
+        Map<Long, String> posNm = new java.util.HashMap<>();
+        for (PositionVO p : hrMapper.listAllPositions()) posNm.put(p.getPositionId(), p.getPositionNm());
+        for (HrHistoryVO h : list) {
+            h.setBeforeText(jsonToText(h.getBeforeJson(), deptNm, posNm));
+            h.setAfterText(jsonToText(h.getAfterJson(), deptNm, posNm));
+        }
+        return list;
+    }
+
+    private static final Map<String, String> ROLE_LABEL = Map.of(
+            "ADMIN", "시스템 관리자", "HR_MANAGER", "인사 관리자",
+            "FINANCE_MANAGER", "재무 관리자", "MANAGER", "부서 매니저",
+            "EMPLOYEE", "일반 직원");
+
+    /** {"deptId":6,"positionId":1,"roleCd":"EMPLOYEE"} → "개발1팀 · 사원 · 일반 직원" */
+    private String jsonToText(String json, Map<Long, String> deptNm, Map<Long, String> posNm) {
+        if (json == null || json.isBlank() || json.trim().equals("{}")) return "-";
+        try {
+            com.fasterxml.jackson.databind.JsonNode node =
+                    new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+            List<String> parts = new ArrayList<>();
+            if (node.hasNonNull("deptId")) {
+                long id = node.get("deptId").asLong();
+                parts.add(deptNm.getOrDefault(id, "부서#" + id));
+            }
+            if (node.hasNonNull("positionId")) {
+                long id = node.get("positionId").asLong();
+                parts.add(posNm.getOrDefault(id, "직급#" + id));
+            }
+            if (node.hasNonNull("roleCd")) {
+                String r = node.get("roleCd").asText();
+                parts.add(ROLE_LABEL.getOrDefault(r, r));
+            }
+            if (node.hasNonNull("salary")) {
+                parts.add(String.format("%,d원", node.get("salary").asLong()));
+            }
+            return parts.isEmpty() ? "-" : String.join(" · ", parts);
+        } catch (Exception e) {
+            return "-";
+        }
     }
 
     @Override

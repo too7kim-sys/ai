@@ -35,6 +35,14 @@ public class GlobalModelAttributes {
         return uid == null ? 0 : messageService.countUnread(uid);
     }
 
+    /** 토픽바 알림 드롭다운용 최근 알림 5건. */
+    @ModelAttribute("topbarNotifications")
+    public java.util.List<egovframework.groupware.notification.service.NotificationVO> topbarNotifications() {
+        Long uid = currentUserId();
+        return uid == null ? java.util.Collections.emptyList()
+                : notificationService.findByUser(uid, false, 5);
+    }
+
     private Long currentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;

@@ -102,13 +102,61 @@
             <button class="menu-toggle" type="button" id="menuToggle" aria-label="메뉴">
                 <i class="bi bi-list"></i>
             </button>
+
+            <!-- 통합 검색 (직원 디렉토리) -->
+            <form class="topbar-search d-none d-md-flex" method="get"
+                  action="${pageContext.request.contextPath}/user/list.do">
+                <i class="bi bi-search"></i>
+                <input type="text" name="keyword" placeholder="직원 검색..." autocomplete="off"/>
+            </form>
+
             <div class="ms-auto d-flex align-items-center gap-1">
-                <a class="topbar-icon" href="${pageContext.request.contextPath}/notification/list.do" title="알림">
-                    <i class="bi bi-bell"></i>
-                    <c:if test="${unreadNotiCount > 0}">
-                        <span class="topbar-badge badge rounded-pill bg-danger">${unreadNotiCount}</span>
-                    </c:if>
+                <!-- 검색 (모바일) -->
+                <a class="topbar-icon d-md-none" href="${pageContext.request.contextPath}/user/list.do" title="검색">
+                    <i class="bi bi-search"></i>
                 </a>
+                <!-- 다크모드 토글 -->
+                <button class="topbar-icon" type="button" id="themeToggle" title="다크/라이트 모드">
+                    <i class="bi bi-moon-stars" id="themeIcon"></i>
+                </button>
+                <!-- 전체화면 -->
+                <button class="topbar-icon d-none d-md-inline" type="button" id="fullscreenToggle" title="전체화면">
+                    <i class="bi bi-arrows-fullscreen" id="fullscreenIcon"></i>
+                </button>
+                <!-- 알림 드롭다운 -->
+                <div class="dropdown">
+                    <button class="topbar-icon" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" title="알림">
+                        <i class="bi bi-bell"></i>
+                        <c:if test="${unreadNotiCount > 0}">
+                            <span class="topbar-badge badge rounded-pill bg-danger">${unreadNotiCount}</span>
+                        </c:if>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end shadow notif-dropdown">
+                        <div class="notif-head d-flex justify-content-between align-items-center">
+                            <strong>알림</strong>
+                            <span class="badge bg-soft-danger">${unreadNotiCount} 신규</span>
+                        </div>
+                        <div class="notif-body">
+                            <c:forEach var="n" items="${topbarNotifications}">
+                                <a class="notif-item ${empty n.readAt ? 'unread' : ''}"
+                                   href="${pageContext.request.contextPath}<c:choose><c:when test='${not empty n.linkUrl}'>${n.linkUrl}</c:when><c:otherwise>/notification/list.do</c:otherwise></c:choose>">
+                                    <span class="notif-dot"></span>
+                                    <span class="notif-text">
+                                        <span class="d-block text-truncate">${n.title}</span>
+                                        <small class="text-muted">${n.typeCd} · ${fn:substring(n.createdAt,0,16)}</small>
+                                    </span>
+                                </a>
+                            </c:forEach>
+                            <c:if test="${empty topbarNotifications}">
+                                <div class="text-center text-muted py-4 small">알림이 없습니다.</div>
+                            </c:if>
+                        </div>
+                        <a class="notif-foot" href="${pageContext.request.contextPath}/notification/list.do">
+                            전체 알림 보기
+                        </a>
+                    </div>
+                </div>
+                <!-- 쪽지 -->
                 <a class="topbar-icon me-2" href="${pageContext.request.contextPath}/message/inbox.do" title="쪽지">
                     <i class="bi bi-chat-dots"></i>
                     <c:if test="${unreadMsgCount > 0}">

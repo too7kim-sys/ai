@@ -17,6 +17,9 @@ public class HrHistoryVO {
     private String changeTypeNm;
     private String beforeJson;
     private String afterJson;
+    /** 사람이 읽을 수 있게 변환된 변경 전/후 요약. */
+    private String beforeText;
+    private String afterText;
     private LocalDate effectiveDt;
     private LocalDateTime createdAt;
     private Long createdBy;

@@ -89,8 +89,8 @@
                     <td><a href="?userId=${h.userId}">${h.userName}</a></td>
                 </c:if>
                 <td><span class="badge bg-info">${h.changeTypeNm != null ? h.changeTypeNm : h.changeTypeCd}</span></td>
-                <td class="small text-muted">${h.beforeJson}</td>
-                <td class="small text-success">${h.afterJson}</td>
+                <td class="small text-muted">${h.beforeText}</td>
+                <td class="small text-success">${h.afterText}</td>
             </tr>
         </c:forEach>
         <c:if test="${empty histories}">
