@@ -8,6 +8,9 @@
                  http://www.springframework.org/schema/security
                  http://www.springframework.org/schema/security/spring-security.xsd">
 
+    <!-- H2 콘솔(개발용)은 Spring Security 필터를 태우지 않는다. 운영 배포 시 제거 권장. -->
+    <http pattern="/h2-console/**" security="none"/>
+
     <http auto-config="false" use-expressions="true" entry-point-ref="authEntryPoint">
         <intercept-url pattern="/error/**" access="permitAll"/>
         <intercept-url pattern="/health.do" access="permitAll"/>

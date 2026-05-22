@@ -7,5 +7,6 @@
     <mapping path="/js/*" exclude="true"/>
     <mapping path="/images/*" exclude="true"/>
     <mapping path="/webjars/*" exclude="true"/>
+    <mapping path="/h2-console/*" exclude="true"/>
     <mapping path="/*" decorator="/WEB-INF/jsp/layout/decorator.jsp"/>
 </sitemesh>

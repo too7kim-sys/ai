@@ -50,6 +50,25 @@ export storage.local.path=/var/lib/groupware/uploads
 
 ## 데이터베이스
 
+### 개발 환경은 H2 in-memory
+개발(`dev`) 프로파일은 `jdbc:h2:mem:groupware` — **메모리 안에만** 존재하며 디스크 파일이 없다.
+Tomcat 종료 시 데이터가 사라지고, 다음 부팅 때 Flyway + `DataInitializer` 가 시드를 재생성한다.
+
+### H2 콘솔 (개발용)
+브라우저에서 DB 를 직접 조회/쿼리할 수 있다.
+
+- URL: <http://localhost:8080/groupware/h2-console/>
+- JDBC URL: `jdbc:h2:mem:groupware`
+- 사용자: `sa` / 비밀번호: (빈칸)
+
+> 운영(PostgreSQL) 배포 시에는 `web.xml` 의 `H2Console` 서블릿 등록과
+> `context-security.xml` 의 `/h2-console/**` security="none" 항목을 제거할 것.
+
+### SQL 로그
+MyBatis SQL 은 SLF4J(log4j2)로 출력된다. `log4j2.xml` 에서 `egovframework.groupware`
+로거가 `DEBUG` 이므로 콘솔/`logs/groupware.log` 에 쿼리·파라미터·결과 건수가 찍힌다.
+SQL 만 보고 싶으면 다른 로거를 `INFO` 로 낮추면 된다.
+
 ### 마이그레이션 적용
 Flyway 가 애플리케이션 부팅 시 자동으로 `db/migration/V*.sql` 을 순서대로 실행.
 
