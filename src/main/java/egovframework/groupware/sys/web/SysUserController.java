@@ -12,8 +12,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.security.SecureRandom;
 
 /**
  * 시스템 관리 - 사용자 관리 (ADMIN 전용).
@@ -59,12 +61,34 @@ public class SysUserController {
     @PostMapping("/sys/user/reset-password.do")
     public String resetPassword(@AuthenticationPrincipal CustomUserDetails me,
                                 @RequestParam Long userId,
-                                @RequestParam(defaultValue = "Demo!2025") String newPassword,
-                                HttpServletRequest req) {
-        userService.resetPassword(userId, newPassword);
+                                HttpServletRequest req,
+                                RedirectAttributes ra) {
+        // 고정 비밀번호 대신 1회용 임시 비밀번호를 생성 — 알려진 자격증명 재사용 방지.
+        String tempPassword = generateTempPassword();
+        userService.resetPassword(userId, tempPassword);
         auditService.log(me.getUserId(), "USER_RESET_PWD", "USER", userId.toString(),
                 null, null, ip(req));
+        ra.addFlashAttribute("resetUserId", userId);
+        ra.addFlashAttribute("tempPassword", tempPassword);
         return "redirect:/sys/user/list.do";
+    }
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    /** 정책(대문자·소문자·숫자·특수문자 포함)을 만족하는 12자리 임시 비밀번호. */
+    private String generateTempPassword() {
+        String upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        String lower = "abcdefghijkmnpqrstuvwxyz";
+        String digit = "23456789";
+        String special = "!@#$%^&*";
+        String all = upper + lower + digit + special;
+        StringBuilder sb = new StringBuilder();
+        sb.append(upper.charAt(RANDOM.nextInt(upper.length())));
+        sb.append(lower.charAt(RANDOM.nextInt(lower.length())));
+        sb.append(digit.charAt(RANDOM.nextInt(digit.length())));
+        sb.append(special.charAt(RANDOM.nextInt(special.length())));
+        for (int i = 0; i < 8; i++) sb.append(all.charAt(RANDOM.nextInt(all.length())));
+        return sb.toString();
     }
 
     @PostMapping("/sys/user/toggle.do")

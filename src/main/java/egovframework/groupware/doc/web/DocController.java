@@ -104,9 +104,15 @@ public class DocController {
     }
 
     @GetMapping("/doc/download.do")
-    public void download(@RequestParam Long docId, HttpServletResponse resp) throws IOException {
+    public void download(@AuthenticationPrincipal CustomUserDetails me,
+                         @RequestParam Long docId, HttpServletResponse resp) throws IOException {
         DocFileVO doc = service.findFile(docId);
         if (doc == null) { resp.sendError(404); return; }
+        // 자료실 폴더 접근 권한 검증 — docId 열거로 부서 제한 폴더의 문서를 받는 것을 차단.
+        if (!service.canAccessFile(docId, me.getUserId(), me.getDeptId())) {
+            resp.sendError(403);
+            return;
+        }
         AttachVO att = attachService.findById(doc.getAttachId());
         if (att == null) { resp.sendError(404); return; }
         service.incrementDownload(docId);
@@ -117,10 +123,23 @@ public class DocController {
     public static void streamAttachment(HttpServletResponse resp, AttachVO att, Path path) throws IOException {
         String fn = URLEncoder.encode(att.getFileNm(), StandardCharsets.UTF_8).replace("+", "%20");
         resp.setStatus(200);
-        resp.setContentType(att.getMimeType() != null ? att.getMimeType() : "application/octet-stream");
+        resp.setContentType(safeContentType(att.getMimeType()));
+        // 브라우저 MIME 스니핑으로 인한 다운로드 첨부의 스크립트 실행 방지.
+        resp.setHeader("X-Content-Type-Options", "nosniff");
         resp.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + fn);
         resp.setContentLength((int) Math.min(Integer.MAX_VALUE, att.getFileSize() == null ? 0 : att.getFileSize()));
         Files.copy(path, resp.getOutputStream());
         resp.getOutputStream().flush();
+    }
+
+    /** HTML/SVG 등 브라우저가 렌더링·실행할 수 있는 타입은 octet-stream 으로 강제. */
+    private static String safeContentType(String mime) {
+        if (mime == null || mime.isBlank()) return "application/octet-stream";
+        String m = mime.toLowerCase();
+        if (m.contains("html") || m.contains("svg") || m.contains("xml")
+                || m.contains("javascript")) {
+            return "application/octet-stream";
+        }
+        return mime;
     }
 }

@@ -130,6 +130,12 @@ public class BoardController {
     public void download(@RequestParam Long attachId, HttpServletResponse resp) throws IOException {
         AttachVO vo = attachService.findById(attachId);
         if (vo == null) { resp.sendError(404); return; }
+        // 게시판 첨부 다운로드는 게시판 그룹에 속한 첨부로만 제한 — attachId 열거로
+        // 자료실/결재 등 다른 모듈의 첨부를 가로채는 것을 차단한다.
+        if (!"BOARD".equals(attachService.findOwnerEntity(attachId))) {
+            resp.sendError(403);
+            return;
+        }
         DocController.streamAttachment(resp, vo, attachService.resolvePath(vo));
     }
 }

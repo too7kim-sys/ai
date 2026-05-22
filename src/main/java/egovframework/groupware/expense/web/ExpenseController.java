@@ -6,6 +6,7 @@ import egovframework.groupware.expense.service.ExpenseReportVO;
 import egovframework.groupware.expense.service.ExpenseService;
 import egovframework.groupware.user.service.UserService;
 import egovframework.groupware.user.service.UserVO;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -87,8 +88,17 @@ public class ExpenseController {
     }
 
     @GetMapping("/expense/detail.do")
-    public String detail(@RequestParam Long reportId, Model model) {
-        model.addAttribute("r", service.findById(reportId));
+    public String detail(@AuthenticationPrincipal CustomUserDetails me,
+                         @RequestParam Long reportId, Model model) {
+        ExpenseReportVO r = service.findById(reportId);
+        // 기안자 본인 또는 재무 관리자만 열람 — reportId 열거로 타인 지출내역 조회 차단.
+        boolean allowed = r != null && (me.getUserId().equals(r.getDrafterId())
+                || "ADMIN".equals(me.getRoleCd())
+                || "FINANCE_MANAGER".equals(me.getRoleCd()));
+        if (!allowed) {
+            throw new AccessDeniedException("지출결의서 열람 권한이 없습니다");
+        }
+        model.addAttribute("r", r);
         return "expense/detail";
     }
 

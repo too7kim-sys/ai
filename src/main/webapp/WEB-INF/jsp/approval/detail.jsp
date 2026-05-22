@@ -8,7 +8,16 @@
         <dt class="col-sm-2">문서번호</dt><dd class="col-sm-4">${d.docNo}</dd>
         <dt class="col-sm-2">양식</dt><dd class="col-sm-4">${d.formNm} (${d.formCd})</dd>
         <dt class="col-sm-2">기안자</dt><dd class="col-sm-4">${d.drafterName} (${d.drafterDept})</dd>
-        <dt class="col-sm-2">상태</dt><dd class="col-sm-4"><span class="badge bg-secondary">${d.statusCd}</span></dd>
+        <dt class="col-sm-2">상태</dt><dd class="col-sm-4">
+            <c:choose>
+                <c:when test="${d.statusCd == 'DRAFT'}"><span class="badge bg-secondary">기안</span></c:when>
+                <c:when test="${d.statusCd == 'IN_PROGRESS'}"><span class="badge bg-primary">진행중</span></c:when>
+                <c:when test="${d.statusCd == 'APPROVED'}"><span class="badge bg-success">승인완료</span></c:when>
+                <c:when test="${d.statusCd == 'REJECTED'}"><span class="badge bg-danger">반려</span></c:when>
+                <c:when test="${d.statusCd == 'CANCELED'}"><span class="badge bg-dark">회수</span></c:when>
+                <c:otherwise><span class="badge bg-secondary">${d.statusCd}</span></c:otherwise>
+            </c:choose>
+        </dd>
         <dt class="col-sm-2">상신일</dt><dd class="col-sm-4">${d.submittedAt}</dd>
         <dt class="col-sm-2">완료일</dt><dd class="col-sm-4">${d.completedAt}</dd>
     </dl>
@@ -28,7 +37,14 @@
             <tr>
                 <td>${l.stepNo}</td>
                 <td>${l.approverName}</td>
-                <td>${l.lineTypeCd}</td>
+                <td>
+                    <c:choose>
+                        <c:when test="${l.lineTypeCd == 'APPROVE'}">결재</c:when>
+                        <c:when test="${l.lineTypeCd == 'AGREE'}">합의</c:when>
+                        <c:when test="${l.lineTypeCd == 'REFER'}">참조</c:when>
+                        <c:otherwise>${l.lineTypeCd}</c:otherwise>
+                    </c:choose>
+                </td>
                 <td>
                     <c:choose>
                         <c:when test="${l.statusCd == 'APPROVED'}"><span class="badge bg-success">승인</span></c:when>
@@ -59,8 +75,10 @@
     <input type="hidden" name="docId" value="${d.docId}"/>
     <div class="mb-2"><label class="form-label">의견</label><textarea class="form-control" name="comment" rows="2"></textarea></div>
     <div>
-        <button name="approve" value="true" class="btn btn-success"><i class="bi bi-check2"></i> 승인</button>
-        <button name="approve" value="false" class="btn btn-danger"><i class="bi bi-x"></i> 반려</button>
+        <button name="approve" value="true" class="btn btn-success"
+                onclick="return confirm('이 문서를 승인 처리하시겠습니까?')"><i class="bi bi-check2"></i> 승인</button>
+        <button name="approve" value="false" class="btn btn-danger"
+                onclick="return confirm('이 문서를 반려 처리하시겠습니까?')"><i class="bi bi-x"></i> 반려</button>
     </div>
 </form>
 </c:if>

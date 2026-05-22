@@ -7,6 +7,16 @@
 <c:set var="active" value="user" scope="request"/>
 <jsp:include page="_nav.jsp"/>
 
+<c:if test="${not empty tempPassword}">
+    <div class="alert alert-success alert-dismissible">
+        <i class="bi bi-key"></i>
+        사용자 #${resetUserId} 의 비밀번호가 초기화되었습니다. 임시 비밀번호:
+        <strong class="user-select-all">${tempPassword}</strong>
+        <div class="small text-muted mt-1">이 값은 다시 표시되지 않습니다. 해당 사용자에게 안전하게 전달하세요.</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
 <form class="row g-2 mb-3" method="get">
     <div class="col-md-4"><input type="text" name="keyword" value="${keyword}" class="form-control" placeholder="이름/이메일 검색"/></div>
     <div class="col-md-2"><button class="btn btn-outline-primary"><i class="bi bi-search"></i> 검색</button></div>
@@ -68,7 +78,7 @@
                         </form>
                     </c:if>
                     <form method="post" action="${pageContext.request.contextPath}/sys/user/reset-password.do" class="d-inline"
-                          onsubmit="return confirm('비밀번호를 Demo!2025 로 초기화할까요?')">
+                          onsubmit="return confirm('임시 비밀번호를 발급해 초기화할까요?')">
                         <sec:csrfInput/><input type="hidden" name="userId" value="${u.userId}"/>
                         <button class="btn btn-sm btn-outline-secondary">PW 초기화</button>
                     </form>

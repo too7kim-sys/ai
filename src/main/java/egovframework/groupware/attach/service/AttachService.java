@@ -19,6 +19,10 @@ public interface AttachService {
                         byte[] content, Long userId) throws IOException;
 
     AttachVO findById(Long attachId);
+
+    /** 첨부가 속한 그룹의 owner_entity (BOARD / DOC 등). 다운로드 시 모듈 경계 검증용. */
+    String findOwnerEntity(Long attachId);
+
     List<AttachVO> findByGroup(Long groupId);
 
     /** 실제 파일 경로 반환 (다운로드용). */

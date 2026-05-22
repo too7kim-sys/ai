@@ -47,6 +47,9 @@
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/bonus.do"><i class="bi bi-gift"></i><span>상여 관리 (HR)</span></a></li>
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/year-end.do"><i class="bi bi-receipt-cutoff"></i><span>연말정산 (HR)</span></a></li>
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/severance.do"><i class="bi bi-box-arrow-right"></i><span>퇴직정산 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/payroll/admin/insurance-rate.do"><i class="bi bi-percent"></i><span>4대보험 요율 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/contract/admin/list.do"><i class="bi bi-file-earmark-text"></i><span>근로계약 관리 (HR)</span></a></li>
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/performance/admin/all.do"><i class="bi bi-bullseye"></i><span>전사 KPI (HR)</span></a></li>
             </sec:authorize>
 
             <li class="menu-title">근태 · 결재</li>
@@ -55,6 +58,12 @@
             <li><a class="nav-link" href="${pageContext.request.contextPath}/approval/pending.do"><i class="bi bi-file-earmark-check"></i><span>전자결재</span></a></li>
             <li><a class="nav-link" href="${pageContext.request.contextPath}/payroll/my.do"><i class="bi bi-cash"></i><span>급여</span></a></li>
             <li><a class="nav-link" href="${pageContext.request.contextPath}/expense/my.do"><i class="bi bi-credit-card"></i><span>지출결의</span></a></li>
+            <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')">
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/attendance/admin/report.do"><i class="bi bi-clipboard-data"></i><span>근태 리포트 (HR)</span></a></li>
+            </sec:authorize>
+            <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER')">
+            <li><a class="nav-link text-primary" href="${pageContext.request.contextPath}/expense/admin/list.do"><i class="bi bi-card-checklist"></i><span>지출결의 관리</span></a></li>
+            </sec:authorize>
 
             <li class="menu-title">협업</li>
             <li><a class="nav-link" href="${pageContext.request.contextPath}/notice/list.do"><i class="bi bi-megaphone"></i><span>공지사항</span></a></li>

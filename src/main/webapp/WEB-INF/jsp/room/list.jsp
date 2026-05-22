@@ -4,6 +4,7 @@
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <title>회의실 예약</title>
 <h2 class="mb-3"><i class="bi bi-door-open"></i> 회의실 예약</h2>
+<sec:authentication property="principal.userId" var="myUid" scope="page"/>
 
 <div class="row g-3">
     <div class="col-md-4">
@@ -18,6 +19,9 @@
                         <small class="d-block text-muted">${r.equipments}</small>
                     </a>
                 </c:forEach>
+                <c:if test="${empty rooms}">
+                    <div class="list-group-item text-muted text-center">등록된 회의실이 없습니다.</div>
+                </c:if>
             </div>
         </div>
 
@@ -74,8 +78,18 @@
                                     <strong>${fn:substring(r.startDt, 11, 16)} ~ ${fn:substring(r.endDt, 11, 16)}</strong>
                                     <span class="badge bg-secondary ms-2">${r.userName}</span>
                                 </div>
-                                <c:if test="${r.userId == myReservations[0].userId or true}">
-                                    <!-- 본인 또는 ADMIN 만 취소 -->
+                                <c:set var="canCancel" value="${r.userId == myUid}"/>
+                                <sec:authorize access="hasRole('ADMIN')">
+                                    <c:set var="canCancel" value="${true}"/>
+                                </sec:authorize>
+                                <c:if test="${canCancel}">
+                                    <form method="post" action="${pageContext.request.contextPath}/room/cancel.do"
+                                          onsubmit="return confirm('이 예약을 취소하시겠습니까?')">
+                                        <sec:csrfInput/>
+                                        <input type="hidden" name="resId" value="${r.resId}"/>
+                                        <input type="hidden" name="roomId" value="${room.roomId}"/>
+                                        <button class="btn btn-sm btn-outline-danger py-0">취소</button>
+                                    </form>
                                 </c:if>
                             </div>
                             <c:if test="${not empty r.purpose}">

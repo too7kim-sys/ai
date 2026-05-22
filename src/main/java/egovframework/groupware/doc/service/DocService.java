@@ -18,6 +18,9 @@ public interface DocService {
                         MultipartFile file, Long ownerId);
     void deleteFile(Long docId, Long actorId, String roleCd);
     DocFileVO findFile(Long docId);
+
+    /** 해당 문서가 사용자가 접근 가능한 폴더에 속하는지 검증 (다운로드 권한). */
+    boolean canAccessFile(Long docId, Long userId, Long deptId);
     List<DocFileVO> listFiles(Long folderId, String keyword);
     List<DocFileVO> searchAll(Long userId, Long deptId, String keyword, int limit);
     void incrementDownload(Long docId);

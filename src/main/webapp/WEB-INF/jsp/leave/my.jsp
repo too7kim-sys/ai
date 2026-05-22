@@ -11,11 +11,28 @@
     <tbody>
     <c:forEach var="r" items="${list}">
         <tr>
-            <td>${r.leaveTypeCd}</td>
+            <td>
+                <c:choose>
+                    <c:when test="${r.leaveTypeCd == 'ANNUAL'}">연차</c:when>
+                    <c:when test="${r.leaveTypeCd == 'HALF'}">반차</c:when>
+                    <c:when test="${r.leaveTypeCd == 'SICK'}">병가</c:when>
+                    <c:when test="${r.leaveTypeCd == 'FAMILY'}">경조사</c:when>
+                    <c:when test="${r.leaveTypeCd == 'OTHER'}">기타</c:when>
+                    <c:otherwise>${r.leaveTypeCd}</c:otherwise>
+                </c:choose>
+            </td>
             <td>${r.startDt}</td><td>${r.endDt}</td>
             <td>${r.days}</td>
             <td>${r.reason}</td>
-            <td><span class="badge bg-secondary">${r.statusCd}</span></td>
+            <td>
+                <c:choose>
+                    <c:when test="${r.statusCd == 'IN_PROGRESS'}"><span class="badge bg-warning text-dark">결재중</span></c:when>
+                    <c:when test="${r.statusCd == 'APPROVED'}"><span class="badge bg-success">승인</span></c:when>
+                    <c:when test="${r.statusCd == 'REJECTED'}"><span class="badge bg-danger">반려</span></c:when>
+                    <c:when test="${r.statusCd == 'CANCELED'}"><span class="badge bg-dark">취소</span></c:when>
+                    <c:otherwise><span class="badge bg-secondary">${r.statusCd}</span></c:otherwise>
+                </c:choose>
+            </td>
             <td><c:if test="${r.approvalDocId != null}"><a class="btn btn-sm btn-outline-secondary" href="${pageContext.request.contextPath}/approval/detail.do?docId=${r.approvalDocId}">결재 보기</a></c:if></td>
         </tr>
     </c:forEach>

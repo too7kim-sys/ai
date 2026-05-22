@@ -94,10 +94,6 @@
                 <i class="bi bi-box-arrow-in-right"></i> 로그인
             </button>
         </form>
-        <div class="seed-box">
-            <i class="bi bi-info-circle"></i>
-            데모 계정 — <strong>admin@company.com</strong> / <strong>Demo!2025</strong>
-        </div>
     </div>
 </div>
 </body>

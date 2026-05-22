@@ -103,6 +103,15 @@ public class DocServiceImpl implements DocService {
 
     @Override public DocFileVO findFile(Long docId) { return mapper.findFile(docId); }
 
+    @Override
+    public boolean canAccessFile(Long docId, Long userId, Long deptId) {
+        DocFileVO doc = mapper.findFile(docId);
+        if (doc == null) return false;
+        return findAccessible(userId, deptId).stream()
+                .anyMatch(f -> f.getFolderId() != null
+                        && f.getFolderId().equals(doc.getFolderId()));
+    }
+
     @Override public List<DocFileVO> listFiles(Long folderId, String keyword) {
         return mapper.listFiles(folderId, keyword);
     }

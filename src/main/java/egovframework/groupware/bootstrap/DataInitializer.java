@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,8 +52,12 @@ import java.util.List;
 /**
  * 첫 기동 시 시드 사용자 20명 + 인사기록/이력, 평가기간, 부양가족, KPI 샘플을 삽입한다.
  * 이미 admin@company.com이 존재하면 skip.
+ *
+ * <p>{@code prod} 프로파일에서는 비활성 — 운영 환경에 알려진 비밀번호의 데모 계정이
+ * 생성되는 것을 막는다. 운영 관리자 계정은 별도 절차로 생성한다.
  */
 @Component
+@Profile("!prod")
 public class DataInitializer {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
@@ -137,7 +142,7 @@ public class DataInitializer {
         seed("emp.sales.lee@company.com",    "이영업",   "EMPLOYEE",        10L,    3);
         seed("emp.sales.kang@company.com",   "강영업",   "EMPLOYEE",        10L,    2);
         seed("emp.fin.yoon@company.com",     "윤회계",   "EMPLOYEE",         4L,    2);
-        log.info("Seeded 20 demo users (password: {})", DEFAULT_PWD);
+        log.info("Seeded 20 demo users.");
 
         seedHrAndEvaluation();
         seedCollab();

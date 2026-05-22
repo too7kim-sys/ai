@@ -15,7 +15,14 @@
                 <td class="text-end"><fmt:formatNumber value="${p.grossPay}"/></td>
                 <td class="text-end"><fmt:formatNumber value="${p.deductionTotal}"/></td>
                 <td class="text-end fw-bold text-primary"><fmt:formatNumber value="${p.netPay}"/></td>
-                <td><span class="badge bg-${p.statusCd == 'PAID' ? 'success' : 'secondary'}">${p.statusCd}</span></td>
+                <td>
+                    <c:choose>
+                        <c:when test="${p.statusCd == 'PAID'}"><span class="badge bg-success">지급완료</span></c:when>
+                        <c:when test="${p.statusCd == 'CONFIRMED'}"><span class="badge bg-info text-dark">확정</span></c:when>
+                        <c:when test="${p.statusCd == 'DRAFT'}"><span class="badge bg-secondary">작성중</span></c:when>
+                        <c:otherwise><span class="badge bg-secondary">${p.statusCd}</span></c:otherwise>
+                    </c:choose>
+                </td>
                 <td><c:if test="${p.paidDt != null}">${p.paidDt}</c:if></td>
                 <td>
                     <a class="btn btn-sm btn-outline-primary" href="${pageContext.request.contextPath}/payroll/my/detail.do?payMonth=${p.payMonth}">상세</a>

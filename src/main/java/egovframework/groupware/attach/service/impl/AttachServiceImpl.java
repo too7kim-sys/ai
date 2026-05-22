@@ -20,12 +20,18 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class AttachServiceImpl implements AttachService, InitializingBean {
 
     private static final Logger log = LoggerFactory.getLogger(AttachServiceImpl.class);
+
+    /** 다운로드 시 브라우저에서 스크립트로 실행될 수 있는 확장자 — 업로드 차단. */
+    private static final Set<String> BLOCKED_EXT = Set.of(
+            ".html", ".htm", ".xhtml", ".shtml", ".mhtml", ".svg",
+            ".js", ".jsp", ".jspx", ".php", ".phtml", ".asp", ".aspx", ".jar");
 
     private final AttachMapper mapper;
     private final Path baseDir;
@@ -54,10 +60,20 @@ public class AttachServiceImpl implements AttachService, InitializingBean {
     public AttachVO store(Long groupId, MultipartFile file, Long userId) throws IOException {
         if (file == null || file.isEmpty()) return null;
         String origName = Objects.requireNonNullElse(file.getOriginalFilename(), "untitled");
+        validateUploadName(origName);
         return persist(groupId, origName, file.getContentType(),
                 file.getSize(),
                 dest -> file.transferTo(dest.toFile()),
                 userId);
+    }
+
+    private void validateUploadName(String name) {
+        String lower = name.toLowerCase();
+        int dot = lower.lastIndexOf('.');
+        String ext = dot > -1 ? lower.substring(dot) : "";
+        if (BLOCKED_EXT.contains(ext)) {
+            throw new ApiException("INVALID_FILE", "허용되지 않는 파일 형식입니다: " + ext);
+        }
     }
 
     @Override
@@ -105,6 +121,7 @@ public class AttachServiceImpl implements AttachService, InitializingBean {
     }
 
     @Override public AttachVO findById(Long attachId) { return mapper.findById(attachId); }
+    @Override public String findOwnerEntity(Long attachId) { return mapper.findOwnerEntity(attachId); }
     @Override public List<AttachVO> findByGroup(Long groupId) { return mapper.findByGroup(groupId); }
 
     @Override

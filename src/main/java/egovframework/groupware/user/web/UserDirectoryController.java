@@ -1,9 +1,11 @@
 package egovframework.groupware.user.web;
 
+import egovframework.groupware.auth.security.CustomUserDetails;
 import egovframework.groupware.cmm.Paging;
 import egovframework.groupware.hr.service.HrService;
 import egovframework.groupware.user.service.UserService;
 import egovframework.groupware.user.service.UserVO;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,13 +45,21 @@ public class UserDirectoryController {
     }
 
     @GetMapping("/user/profile.do")
-    public String profile(@RequestParam Long userId, Model model) {
+    public String profile(@AuthenticationPrincipal CustomUserDetails me,
+                          @RequestParam Long userId, Model model) {
         UserVO user = userService.findById(userId);
         if (user == null) return "redirect:/user/list.do";
+        // 인사이력·인사기록·부양가족·계좌번호는 민감정보 — 본인 또는 인사권자만 열람.
+        boolean canViewSensitive = me.getUserId().equals(userId)
+                || "ADMIN".equals(me.getRoleCd())
+                || "HR_MANAGER".equals(me.getRoleCd());
         model.addAttribute("user", user);
-        model.addAttribute("histories", hrService.findHistoryByUser(userId));
-        model.addAttribute("records", hrService.findRecordsByUser(userId));
-        model.addAttribute("families", hrService.findFamilyByUser(userId));
+        model.addAttribute("canViewSensitive", canViewSensitive);
+        if (canViewSensitive) {
+            model.addAttribute("histories", hrService.findHistoryByUser(userId));
+            model.addAttribute("records", hrService.findRecordsByUser(userId));
+            model.addAttribute("families", hrService.findFamilyByUser(userId));
+        }
         return "user/profile";
     }
 }

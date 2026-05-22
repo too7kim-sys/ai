@@ -17,5 +17,8 @@
             <td>${r.note}</td>
         </tr>
     </c:forEach>
+    <c:if test="${empty rates}">
+        <tr><td colspan="7" class="text-center text-muted py-4">등록된 보험요율이 없습니다.</td></tr>
+    </c:if>
     </tbody>
 </table></div>

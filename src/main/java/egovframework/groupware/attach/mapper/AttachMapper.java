@@ -19,6 +19,9 @@ public interface AttachMapper {
 
     AttachVO findById(@Param("attachId") Long attachId);
 
+    /** 첨부가 속한 그룹의 owner_entity (BOARD / DOC / ...). 첨부 다운로드 모듈 검증용. */
+    String findOwnerEntity(@Param("attachId") Long attachId);
+
     List<AttachVO> findByGroup(@Param("groupId") Long groupId);
 
     int delete(@Param("attachId") Long attachId);

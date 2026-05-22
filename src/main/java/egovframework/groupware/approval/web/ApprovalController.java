@@ -3,6 +3,7 @@ package egovframework.groupware.approval.web;
 import egovframework.groupware.approval.service.ApprovalDocVO;
 import egovframework.groupware.approval.service.ApprovalService;
 import egovframework.groupware.auth.security.CustomUserDetails;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -52,18 +53,23 @@ public class ApprovalController {
         return "approval/box";
     }
 
-    @GetMapping("/approval/refer.do")
-    public String refer(Model model) {
-        model.addAttribute("list", java.util.Collections.emptyList());
-        model.addAttribute("box", "refer");
-        return "approval/box";
-    }
-
     @GetMapping("/approval/detail.do")
-    public String detail(@RequestParam Long docId, Model model) {
+    public String detail(@AuthenticationPrincipal CustomUserDetails me,
+                         @RequestParam Long docId, Model model) {
         ApprovalDocVO d = service.findDoc(docId);
+        // 기안자·결재선 참여자(또는 위임 수임자)·ADMIN 만 열람 가능 — docId 열거 차단.
+        if (d == null || !canViewDoc(d, me)) {
+            throw new AccessDeniedException("결재 문서 열람 권한이 없습니다");
+        }
         model.addAttribute("d", d);
         return "approval/detail";
+    }
+
+    private boolean canViewDoc(ApprovalDocVO d, CustomUserDetails me) {
+        Long uid = me.getUserId();
+        if (uid.equals(d.getDrafterId()) || "ADMIN".equals(me.getRoleCd())) return true;
+        return d.getLines().stream().anyMatch(l ->
+                uid.equals(l.getApproverId()) || uid.equals(l.getDelegatedToUserId()));
     }
 
     @PostMapping("/approval/act.do")

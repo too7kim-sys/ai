@@ -8,7 +8,16 @@
     <c:forEach var="c" items="${list}">
         <tr>
             <td><strong>${c.contractNo}</strong></td>
-            <td>${c.contractTypeCd}</td>
+            <td>
+                <c:choose>
+                    <c:when test="${c.contractTypeCd == 'REGULAR'}">정규직</c:when>
+                    <c:when test="${c.contractTypeCd == 'FIXED_TERM'}">기간제</c:when>
+                    <c:when test="${c.contractTypeCd == 'PART_TIME'}">단시간</c:when>
+                    <c:when test="${c.contractTypeCd == 'TEMP'}">시용기간</c:when>
+                    <c:when test="${c.contractTypeCd == 'INTERN'}">인턴</c:when>
+                    <c:otherwise>${c.contractTypeCd}</c:otherwise>
+                </c:choose>
+            </td>
             <td>${c.startDt} ~ ${c.endDt == null ? '기간없음' : c.endDt}</td>
             <td>
                 <c:choose>

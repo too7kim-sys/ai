@@ -25,15 +25,26 @@
                     <span class="text-muted">연락처</span><span>${user.phone}</span></li>
                 <li class="list-group-item d-flex justify-content-between">
                     <span class="text-muted">입사일</span><span>${user.hireDate}</span></li>
+                <c:if test="${canViewSensitive}">
                 <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">은행</span><span>${user.bankCd} ${user.bankAccount}</span></li>
+                    <span class="text-muted">은행</span><span><c:out value="${user.bankCd}"/> <c:out value="${user.bankAccount}"/></span></li>
                 <li class="list-group-item d-flex justify-content-between">
                     <span class="text-muted">최근 로그인</span><span>${user.lastLoginAt}</span></li>
+                </c:if>
             </ul>
         </div>
     </div>
 
     <div class="col-md-8">
+        <c:if test="${!canViewSensitive}">
+        <div class="card">
+            <div class="card-body text-muted text-center py-5">
+                <i class="bi bi-shield-lock fs-3 d-block mb-2"></i>
+                인사이력·인사기록·부양가족 정보는 본인 또는 인사 담당자만 열람할 수 있습니다.
+            </div>
+        </div>
+        </c:if>
+        <c:if test="${canViewSensitive}">
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-clock-history"></i> 인사이력</span>
@@ -109,5 +120,6 @@
                 </tbody>
             </table>
         </div>
+        </c:if>
     </div>
 </div>
