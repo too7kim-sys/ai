@@ -211,6 +211,35 @@
             </div>
         </header>
 
+        <!-- 상단 그룹 탭 (1차 카테고리). 클릭하면 좌측 사이드바가 해당 그룹의 메뉴만 표시한다. -->
+        <nav class="groupbar" id="groupbar">
+            <a class="group-tab" data-group="메인" href="${pageContext.request.contextPath}/dashboard.do">
+                <i class="bi bi-speedometer2"></i><span>대시보드</span>
+            </a>
+            <a class="group-tab" data-group="인사 · 평가">
+                <i class="bi bi-people"></i><span>인사 · 평가</span>
+            </a>
+            <a class="group-tab" data-group="근태 · 결재">
+                <i class="bi bi-clipboard-check"></i><span>근태 · 결재</span>
+            </a>
+            <a class="group-tab" data-group="협업">
+                <i class="bi bi-chat-square-text"></i><span>협업</span>
+            </a>
+            <a class="group-tab" data-group="자산 · 차량">
+                <i class="bi bi-laptop"></i><span>자산 · 차량</span>
+            </a>
+            <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER','MANAGER')">
+            <a class="group-tab" data-group="재무 · 회계">
+                <i class="bi bi-bank"></i><span>재무 · 회계</span>
+            </a>
+            </sec:authorize>
+            <sec:authorize access="hasRole('ADMIN')">
+            <a class="group-tab" data-group="시스템 관리">
+                <i class="bi bi-gear"></i><span>시스템</span>
+            </a>
+            </sec:authorize>
+        </nav>
+
         <!-- 본문 -->
         <main class="content">
             <div class="page-title-box">

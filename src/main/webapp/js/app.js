@@ -41,46 +41,80 @@
         });
         if (best) best.classList.add('active');
 
-        // ----- 사이드바 그룹 접기/펼치기 -----
-        // .menu-title 다음의 형제 <li> 들을 다음 .menu-title 직전까지 묶어
-        // 헤더 클릭으로 함께 접고 편다. 상태는 localStorage 에 저장.
+        // ----- 상단 그룹 탭 + 좌측 세부 메뉴 (1차/2차 메뉴 분리) -----
+        // .menu-title 다음의 형제 <li> 들을 같은 그룹으로 묶고, 상단 탭 클릭에
+        // 따라 좌측에는 선택된 그룹의 항목만 표시한다.
         var titles = document.querySelectorAll('.side-nav .menu-title');
+        var groups = {}; // name -> { items: [li...] }
+        var groupOrder = [];
         titles.forEach(function (title) {
-            var key = 'sb-group:' + (title.textContent || '').trim();
+            var name = (title.textContent || '').trim();
             var items = [];
             for (var sib = title.nextElementSibling; sib && !sib.classList.contains('menu-title');
                  sib = sib.nextElementSibling) {
                 sib.classList.add('group-item');
+                sib.setAttribute('data-group', name);
                 items.push(sib);
             }
-            if (items.length === 0) return;
-
-            // 화살표 아이콘 추가 (텍스트는 이미 읽어둠)
-            var caret = document.createElement('i');
-            caret.className = 'bi bi-chevron-down group-caret';
-            title.appendChild(caret);
-
-            // 초기 상태: 저장값 > 현재 active 그룹은 강제 펼침
-            var saved = localStorage.getItem(key);
-            var hasActive = items.some(function (li) { return li.querySelector('.nav-link.active'); });
-            var collapsed = saved === '1' && !hasActive;
-            applyGroup(title, items, collapsed);
-
-            title.addEventListener('click', function () {
-                var nowCollapsed = !title.classList.contains('collapsed');
-                applyGroup(title, items, nowCollapsed);
-                localStorage.setItem(key, nowCollapsed ? '1' : '0');
-            });
+            if (items.length > 0) { groups[name] = { items: items }; groupOrder.push(name); }
         });
 
-        function applyGroup(title, items, collapsed) {
-            if (collapsed) title.classList.add('collapsed');
-            else title.classList.remove('collapsed');
-            items.forEach(function (li) {
-                if (collapsed) li.classList.add('hidden');
-                else li.classList.remove('hidden');
-            });
+        // 좌측 사이드바 상단에 "현재 그룹" 라벨 추가
+        var sideNav = document.querySelector('.side-nav');
+        var currentGroupLabel = null;
+        if (sideNav && groupOrder.length > 0) {
+            currentGroupLabel = document.createElement('li');
+            currentGroupLabel.className = 'current-group-label';
+            sideNav.insertBefore(currentGroupLabel, sideNav.firstChild);
         }
+
+        function setCurrentGroup(name) {
+            // 좌측 항목 필터링
+            Object.keys(groups).forEach(function (k) {
+                var visible = (k === name);
+                groups[k].items.forEach(function (li) {
+                    if (visible) li.classList.remove('hidden');
+                    else li.classList.add('hidden');
+                });
+            });
+            // 좌측 라벨
+            if (currentGroupLabel) {
+                currentGroupLabel.innerHTML = '';
+                var icon = document.createElement('i');
+                icon.className = 'bi bi-folder2-open';
+                var text = document.createElement('span');
+                text.textContent = name;
+                currentGroupLabel.appendChild(icon);
+                currentGroupLabel.appendChild(text);
+            }
+            // 상단 탭 active 갱신
+            document.querySelectorAll('.groupbar .group-tab').forEach(function (tab) {
+                if (tab.getAttribute('data-group') === name) tab.classList.add('active');
+                else tab.classList.remove('active');
+            });
+            localStorage.setItem('sb-active-group', name);
+        }
+
+        // 현재 페이지가 속한 그룹 자동 식별 → 폴백으로 localStorage → 첫 그룹
+        var initialGroup = null;
+        if (best) {
+            var li = best.closest('li');
+            if (li && li.hasAttribute('data-group')) initialGroup = li.getAttribute('data-group');
+        }
+        if (!initialGroup) initialGroup = localStorage.getItem('sb-active-group');
+        if (!initialGroup || !groups[initialGroup]) initialGroup = groupOrder[0];
+        if (initialGroup) setCurrentGroup(initialGroup);
+
+        // 그룹 탭 클릭 — href 가 있는 탭(대시보드)은 그대로 이동, 없는 탭은 좌측만 전환
+        document.querySelectorAll('.groupbar .group-tab').forEach(function (tab) {
+            tab.addEventListener('click', function (e) {
+                var hasHref = tab.getAttribute('href');
+                if (hasHref) return;
+                e.preventDefault();
+                var name = tab.getAttribute('data-group');
+                if (groups[name]) setCurrentGroup(name);
+            });
+        });
 
         // ----- 다크 / 라이트 모드 -----
         var themeToggle = document.getElementById('themeToggle');

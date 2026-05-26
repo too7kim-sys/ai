@@ -70,28 +70,60 @@ a { text-decoration: none; }
 .side-logo i { color: var(--gw-primary); margin-right: .5rem; font-size: 1.4rem; }
 
 .side-nav { list-style: none; padding: .5rem 0 2rem; margin: 0; }
-.side-nav .menu-title {
-    padding: .75rem 1.5rem .4rem;
-    font-size: .6875rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: #8c98a5;
-    font-weight: 700;
-    cursor: pointer;
-    user-select: none;
+/* 그룹 라벨은 상단 그룹바로 이동했으므로 좌측에서는 숨김 */
+.side-nav .menu-title { display: none; }
+/* 그룹 필터링 — 비활성 그룹의 항목은 숨김 */
+.side-nav li.group-item.hidden { display: none; }
+/* 좌측 현재 그룹 표시 라벨 */
+.side-nav .current-group-label {
+    padding: 1rem 1.5rem .25rem;
+    font-size: .75rem;
+    color: #c7cdd6;
+    font-weight: 600;
+    letter-spacing: .02em;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    transition: color .15s;
+    gap: .5rem;
 }
-.side-nav .menu-title:hover { color: #fff; }
-.side-nav .menu-title .group-caret {
-    font-size: .65rem;
-    transition: transform .2s;
-    opacity: .7;
+.side-nav .current-group-label i { color: var(--gw-primary); }
+
+/* ====== 상단 그룹바 (1차 카테고리 탭) ====== */
+.groupbar {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0 .5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    height: 44px;
+    align-items: stretch;
+    position: relative;
+    z-index: 5;
 }
-.side-nav .menu-title.collapsed .group-caret { transform: rotate(-90deg); }
-.side-nav li.group-item.hidden { display: none; }
+.groupbar::-webkit-scrollbar { height: 4px; }
+.groupbar .group-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: 0 1rem;
+    color: #6b7280;
+    font-size: .875rem;
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+}
+.groupbar .group-tab i { font-size: 1rem; }
+.groupbar .group-tab:hover { color: #111827; background: rgba(0,0,0,.03); }
+.groupbar .group-tab.active {
+    color: var(--gw-primary);
+    border-bottom-color: var(--gw-primary);
+    font-weight: 600;
+}
+body.dark-mode .groupbar { background: #1f2937; border-color: rgba(255,255,255,.08); }
+body.dark-mode .groupbar .group-tab { color: #9ca3af; }
+body.dark-mode .groupbar .group-tab:hover { color: #fff; background: rgba(255,255,255,.05); }
 .side-nav .nav-link {
     display: flex;
     align-items: center;
