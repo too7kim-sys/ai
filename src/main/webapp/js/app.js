@@ -41,6 +41,47 @@
         });
         if (best) best.classList.add('active');
 
+        // ----- 사이드바 그룹 접기/펼치기 -----
+        // .menu-title 다음의 형제 <li> 들을 다음 .menu-title 직전까지 묶어
+        // 헤더 클릭으로 함께 접고 편다. 상태는 localStorage 에 저장.
+        var titles = document.querySelectorAll('.side-nav .menu-title');
+        titles.forEach(function (title) {
+            var key = 'sb-group:' + (title.textContent || '').trim();
+            var items = [];
+            for (var sib = title.nextElementSibling; sib && !sib.classList.contains('menu-title');
+                 sib = sib.nextElementSibling) {
+                sib.classList.add('group-item');
+                items.push(sib);
+            }
+            if (items.length === 0) return;
+
+            // 화살표 아이콘 추가 (텍스트는 이미 읽어둠)
+            var caret = document.createElement('i');
+            caret.className = 'bi bi-chevron-down group-caret';
+            title.appendChild(caret);
+
+            // 초기 상태: 저장값 > 현재 active 그룹은 강제 펼침
+            var saved = localStorage.getItem(key);
+            var hasActive = items.some(function (li) { return li.querySelector('.nav-link.active'); });
+            var collapsed = saved === '1' && !hasActive;
+            applyGroup(title, items, collapsed);
+
+            title.addEventListener('click', function () {
+                var nowCollapsed = !title.classList.contains('collapsed');
+                applyGroup(title, items, nowCollapsed);
+                localStorage.setItem(key, nowCollapsed ? '1' : '0');
+            });
+        });
+
+        function applyGroup(title, items, collapsed) {
+            if (collapsed) title.classList.add('collapsed');
+            else title.classList.remove('collapsed');
+            items.forEach(function (li) {
+                if (collapsed) li.classList.add('hidden');
+                else li.classList.remove('hidden');
+            });
+        }
+
         // ----- 다크 / 라이트 모드 -----
         var themeToggle = document.getElementById('themeToggle');
         var themeIcon = document.getElementById('themeIcon');

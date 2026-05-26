@@ -77,7 +77,21 @@ a { text-decoration: none; }
     letter-spacing: .05em;
     color: #8c98a5;
     font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: color .15s;
 }
+.side-nav .menu-title:hover { color: #fff; }
+.side-nav .menu-title .group-caret {
+    font-size: .65rem;
+    transition: transform .2s;
+    opacity: .7;
+}
+.side-nav .menu-title.collapsed .group-caret { transform: rotate(-90deg); }
+.side-nav li.group-item.hidden { display: none; }
 .side-nav .nav-link {
     display: flex;
     align-items: center;
