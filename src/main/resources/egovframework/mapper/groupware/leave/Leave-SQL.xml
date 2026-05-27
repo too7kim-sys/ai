@@ -77,4 +77,34 @@
            SET annual_used = annual_used + #{days}, updated_at = CURRENT_TIMESTAMP
          WHERE user_id = #{userId} AND bal_year = #{year}
     </update>
+
+    <resultMap id="balRowMap" type="egovframework.groupware.leave.service.LeaveBalanceRow">
+        <result property="userId" column="user_id"/>
+        <result property="name" column="name"/>
+        <result property="email" column="email"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="hireDate" column="hire_date"/>
+        <result property="year" column="bal_year"/>
+        <result property="annualGiven" column="annual_given"/>
+        <result property="annualUsed" column="annual_used"/>
+    </resultMap>
+
+    <select id="listBalancesForYear" resultMap="balRowMap">
+        SELECT u.user_id, u.name, u.email, u.hire_date,
+               d.dept_nm AS dept_name,
+               #{year}   AS bal_year,
+               COALESCE(b.annual_given, 0) AS annual_given,
+               COALESCE(b.annual_used,  0) AS annual_used
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_leave_balance b
+                 ON b.user_id = u.user_id AND b.bal_year = #{year}
+         WHERE u.deleted_at IS NULL AND u.use_yn = 'Y'
+        <if test="keyword != null and keyword != ''">
+           AND (u.name  ILIKE '%' || #{keyword} || '%'
+             OR u.email ILIKE '%' || #{keyword} || '%'
+             OR d.dept_nm ILIKE '%' || #{keyword} || '%')
+        </if>
+         ORDER BY d.dept_nm NULLS LAST, u.name
+    </select>
 </mapper>

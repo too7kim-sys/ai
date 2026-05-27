@@ -61,6 +61,9 @@
             <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')">
             <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/attendance/admin/report.do"><i class="bi bi-clipboard-data"></i><span>근태 리포트 (HR)</span></a></li>
             </sec:authorize>
+            <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
+            <li><a class="nav-link text-success" href="${pageContext.request.contextPath}/leave/admin/balance.do"><i class="bi bi-calendar-plus"></i><span>휴가 일수 관리 (HR)</span></a></li>
+            </sec:authorize>
             <sec:authorize access="hasAnyRole('ADMIN','FINANCE_MANAGER')">
             <li><a class="nav-link text-primary" href="${pageContext.request.contextPath}/expense/admin/list.do"><i class="bi bi-card-checklist"></i><span>지출결의 관리</span></a></li>
             </sec:authorize>

@@ -1,5 +1,6 @@
 package egovframework.groupware.leave.mapper;
 
+import egovframework.groupware.leave.service.LeaveBalanceRow;
 import egovframework.groupware.leave.service.LeaveBalanceVO;
 import egovframework.groupware.leave.service.LeaveRequestVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -26,4 +27,8 @@ public interface LeaveMapper {
                       @Param("given") BigDecimal given);
     int addUsed(@Param("userId") Long userId, @Param("year") int year,
                 @Param("days") BigDecimal days);
+
+    /** 관리자용 — 연도별 전체 활성 사용자 + 해당 연도 잔여를 조회. */
+    List<LeaveBalanceRow> listBalancesForYear(@Param("year") int year,
+                                              @Param("keyword") String keyword);
 }
