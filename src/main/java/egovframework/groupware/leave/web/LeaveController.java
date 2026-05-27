@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +39,10 @@ public class LeaveController {
     @PostMapping("/leave/write.do")
     public String write(@AuthenticationPrincipal CustomUserDetails me,
                         @RequestParam String leaveTypeCd,
-                        @RequestParam String startDt,
-                        @RequestParam String endDt,
+                        @RequestParam(required = false) String startDt,
+                        @RequestParam(required = false) String endDt,
+                        @RequestParam(required = false) String startTime,
+                        @RequestParam(required = false) String endTime,
                         @RequestParam(required = false) String reason,
                         @RequestParam(name = "approverIds", required = false) List<Long> approverIds) {
         if (approverIds == null || approverIds.isEmpty()) {
@@ -49,8 +53,20 @@ public class LeaveController {
                 approverIds.add(1L);
             }
         }
-        leaveService.apply(me.getUserId(), leaveTypeCd,
-            LocalDate.parse(startDt), LocalDate.parse(endDt), reason, approverIds);
+
+        LocalDate start = (startDt != null && !startDt.isEmpty()) ? LocalDate.parse(startDt) : null;
+        LocalDate end   = (endDt   != null && !endDt.isEmpty())   ? LocalDate.parse(endDt)   : null;
+        LocalDateTime startAt = null, endAt = null;
+        if ("HOURLY".equals(leaveTypeCd)) {
+            if (start == null || startTime == null || endTime == null) {
+                throw new egovframework.groupware.cmm.ApiException("INVALID_TIME",
+                        "시간연차는 일자와 시작/종료 시각이 모두 필요합니다");
+            }
+            startAt = LocalDateTime.of(start, LocalTime.parse(startTime));
+            endAt   = LocalDateTime.of(start, LocalTime.parse(endTime));
+        }
+
+        leaveService.apply(me.getUserId(), leaveTypeCd, start, end, startAt, endAt, reason, approverIds);
         return "redirect:/leave/my.do";
     }
 

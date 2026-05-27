@@ -15,13 +15,22 @@
                 <c:choose>
                     <c:when test="${r.leaveTypeCd == 'ANNUAL'}">연차</c:when>
                     <c:when test="${r.leaveTypeCd == 'HALF'}">반차</c:when>
+                    <c:when test="${r.leaveTypeCd == 'HOURLY'}"><span class="badge bg-info">시간연차</span></c:when>
                     <c:when test="${r.leaveTypeCd == 'SICK'}">병가</c:when>
                     <c:when test="${r.leaveTypeCd == 'FAMILY'}">경조사</c:when>
                     <c:when test="${r.leaveTypeCd == 'OTHER'}">기타</c:when>
                     <c:otherwise>${r.leaveTypeCd}</c:otherwise>
                 </c:choose>
             </td>
-            <td>${r.startDt}</td><td>${r.endDt}</td>
+            <c:choose>
+                <c:when test="${r.leaveTypeCd == 'HOURLY' and r.startAt != null}">
+                    <td>${r.startDt}<div class="text-muted small">${r.startAt.toLocalTime()}</div></td>
+                    <td>${r.endDt}<div class="text-muted small">${r.endAt.toLocalTime()}</div></td>
+                </c:when>
+                <c:otherwise>
+                    <td>${r.startDt}</td><td>${r.endDt}</td>
+                </c:otherwise>
+            </c:choose>
             <td>${r.days}</td>
             <td>${r.reason}</td>
             <td>

@@ -10,6 +10,8 @@
         <result property="leaveTypeCd" column="leave_type_cd"/>
         <result property="startDt" column="start_dt"/>
         <result property="endDt" column="end_dt"/>
+        <result property="startAt" column="start_at"/>
+        <result property="endAt" column="end_at"/>
         <result property="days" column="days"/>
         <result property="reason" column="reason"/>
         <result property="statusCd" column="status_cd"/>
@@ -26,9 +28,11 @@
 
     <insert id="insertRequest" parameterType="egovframework.groupware.leave.service.LeaveRequestVO"
             useGeneratedKeys="true" keyProperty="leaveId" keyColumn="leave_id">
-        INSERT INTO gw_leave_req (user_id, leave_type_cd, start_dt, end_dt, days, reason,
+        INSERT INTO gw_leave_req (user_id, leave_type_cd, start_dt, end_dt,
+                                  start_at, end_at, days, reason,
                                   status_cd, approval_doc_id)
-        VALUES (#{userId}, #{leaveTypeCd}, #{startDt}, #{endDt}, #{days}, #{reason},
+        VALUES (#{userId}, #{leaveTypeCd}, #{startDt}, #{endDt},
+                #{startAt}, #{endAt}, #{days}, #{reason},
                 COALESCE(#{statusCd}, 'IN_PROGRESS'), #{approvalDocId})
     </insert>
 

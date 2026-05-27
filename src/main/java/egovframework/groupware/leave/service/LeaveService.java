@@ -1,12 +1,18 @@
 package egovframework.groupware.leave.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface LeaveService {
 
-    /** 휴가 신청 → 결재 자동 상신 (LEAVE 양식). */
+    /**
+     * 휴가 신청 → 결재 자동 상신 (LEAVE 양식).
+     * 시간연차(HOURLY)인 경우 {@code startAt} / {@code endAt} 가 필수이며,
+     * 그 외 유형에서는 무시된다.
+     */
     Long apply(Long userId, String leaveTypeCd, LocalDate start, LocalDate end,
+               LocalDateTime startAt, LocalDateTime endAt,
                String reason, List<Long> approverIds);
 
     List<LeaveRequestVO> listMine(Long userId);

@@ -35,7 +35,8 @@ public class LeaveApprovalHook implements ApprovalCompletionHook {
         }
         if (approved) {
             leaveMapper.updateRequestStatus(req.getLeaveId(), "APPROVED", null);
-            if ("ANNUAL".equals(req.getLeaveTypeCd()) || "HALF".equals(req.getLeaveTypeCd())) {
+            String t = req.getLeaveTypeCd();
+            if ("ANNUAL".equals(t) || "HALF".equals(t) || "HOURLY".equals(t)) {
                 leaveMapper.addUsed(req.getUserId(), Year.now().getValue(), req.getDays());
             }
             log.info("Leave approved (leaveId={}, days={})", req.getLeaveId(), req.getDays());
