@@ -63,8 +63,9 @@
         UPDATE gw_asset
            SET asset_nm = #{assetNm}, category_cd = #{categoryCd},
                brand = #{brand}, model_nm = #{modelNm}, serial_no = #{serialNo},
-               purchase_dt = #{purchaseDt}, purchase_amount = #{purchaseAmount},
-               depreciation_months = #{depreciationMonths},
+               purchase_dt = #{purchaseDt},
+               purchase_amount     = COALESCE(#{purchaseAmount},     purchase_amount),
+               depreciation_months = COALESCE(#{depreciationMonths}, depreciation_months),
                location = #{location}, memo = #{memo},
                updated_at = CURRENT_TIMESTAMP
          WHERE asset_id = #{assetId} AND deleted_at IS NULL

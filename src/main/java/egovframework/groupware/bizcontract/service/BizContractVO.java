@@ -3,6 +3,7 @@ package egovframework.groupware.bizcontract.service;
 import egovframework.groupware.cmm.BaseVO;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,7 +18,9 @@ public class BizContractVO extends BaseVO {
     private String vendorNm;
     private String contractTypeCd;
     private String title;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDt;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate endDt;
     private String autoRenewYn;
     private Integer renewNoticeDays;

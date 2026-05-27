@@ -3,6 +3,7 @@ package egovframework.groupware.invoice.service;
 import egovframework.groupware.cmm.BaseVO;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,7 +20,9 @@ public class InvoiceVO extends BaseVO {
     private Long bizContractId;
     private String contractTitle;
     private Long scheduleId;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate issueDt;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate dueDt;
     private BigDecimal amountNet;
     private BigDecimal vatAmount;
