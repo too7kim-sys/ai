@@ -37,6 +37,7 @@
         <intercept-url pattern="/invoice/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
         <intercept-url pattern="/payment/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
         <intercept-url pattern="/expense/admin/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
+        <intercept-url pattern="/asset/my.do" access="isAuthenticated()"/>
         <intercept-url pattern="/asset/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
 
         <intercept-url pattern="/**" access="isAuthenticated()"/>
