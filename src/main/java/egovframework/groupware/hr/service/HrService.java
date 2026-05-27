@@ -33,4 +33,24 @@ public interface HrService {
     Long createFamily(FamilyVO vo);
     void deleteFamily(Long famId, Long currentUserId);
     List<FamilyVO> findFamilyByUser(Long userId);
+
+    /* 경력 */
+    Long createCareer(HrCareerVO vo);
+    void deleteCareer(Long careerId);
+    List<HrCareerVO> findCareerByUser(Long userId);
+
+    /* 학력 */
+    Long createEducation(HrEducationVO vo);
+    void deleteEducation(Long eduId);
+    List<HrEducationVO> findEducationByUser(Long userId);
+
+    /* 교육이수 */
+    Long createTraining(HrTrainingVO vo);
+    void deleteTraining(Long trnId);
+    List<HrTrainingVO> findTrainingByUser(Long userId);
+
+    /* 상벌 */
+    Long createAward(HrAwardVO vo);
+    void deleteAward(Long awardId);
+    List<HrAwardVO> findAwardByUser(Long userId);
 }

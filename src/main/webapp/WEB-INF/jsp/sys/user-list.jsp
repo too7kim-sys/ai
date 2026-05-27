@@ -20,7 +20,14 @@
 <form class="row g-2 mb-3" method="get">
     <div class="col-md-4"><input type="text" name="keyword" value="${keyword}" class="form-control" placeholder="이름/이메일 검색"/></div>
     <div class="col-md-2"><button class="btn btn-outline-primary"><i class="bi bi-search"></i> 검색</button></div>
-    <div class="col-md-6 text-end text-muted small align-self-center">총 ${paging.total}건</div>
+    <div class="col-md-6 d-flex justify-content-end align-items-center gap-3">
+        <span class="text-muted small">총 ${paging.total}건</span>
+        <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
+            <a class="btn btn-primary" href="${pageContext.request.contextPath}/sys/user/create.do">
+                <i class="bi bi-person-plus"></i> 신규 사용자 등록
+            </a>
+        </sec:authorize>
+    </div>
 </form>
 
 <div class="card">

@@ -5,9 +5,13 @@ import egovframework.groupware.hr.mapper.HrMapper;
 import egovframework.groupware.hr.service.DeptFlatVO;
 import egovframework.groupware.hr.service.DeptVO;
 import egovframework.groupware.hr.service.FamilyVO;
+import egovframework.groupware.hr.service.HrAwardVO;
+import egovframework.groupware.hr.service.HrCareerVO;
+import egovframework.groupware.hr.service.HrEducationVO;
 import egovframework.groupware.hr.service.HrHistoryVO;
 import egovframework.groupware.hr.service.HrRecordVO;
 import egovframework.groupware.hr.service.HrService;
+import egovframework.groupware.hr.service.HrTrainingVO;
 import egovframework.groupware.hr.service.PositionVO;
 import egovframework.groupware.user.mapper.UserMapper;
 import egovframework.groupware.user.service.UserVO;
@@ -209,6 +213,38 @@ public class HrServiceImpl implements HrService {
     }
 
     @Override public List<FamilyVO> findFamilyByUser(Long userId) { return hrMapper.listFamilyByUser(userId); }
+
+    /* ===== 경력 ===== */
+    @Override @Transactional
+    public Long createCareer(HrCareerVO vo) { hrMapper.insertCareer(vo); return vo.getCareerId(); }
+    @Override @Transactional
+    public void deleteCareer(Long careerId) { hrMapper.deleteCareer(careerId); }
+    @Override
+    public List<HrCareerVO> findCareerByUser(Long userId) { return hrMapper.listCareerByUser(userId); }
+
+    /* ===== 학력 ===== */
+    @Override @Transactional
+    public Long createEducation(HrEducationVO vo) { hrMapper.insertEducation(vo); return vo.getEduId(); }
+    @Override @Transactional
+    public void deleteEducation(Long eduId) { hrMapper.deleteEducation(eduId); }
+    @Override
+    public List<HrEducationVO> findEducationByUser(Long userId) { return hrMapper.listEducationByUser(userId); }
+
+    /* ===== 교육이수 ===== */
+    @Override @Transactional
+    public Long createTraining(HrTrainingVO vo) { hrMapper.insertTraining(vo); return vo.getTrnId(); }
+    @Override @Transactional
+    public void deleteTraining(Long trnId) { hrMapper.deleteTraining(trnId); }
+    @Override
+    public List<HrTrainingVO> findTrainingByUser(Long userId) { return hrMapper.listTrainingByUser(userId); }
+
+    /* ===== 상벌 ===== */
+    @Override @Transactional
+    public Long createAward(HrAwardVO vo) { hrMapper.insertAward(vo); return vo.getAwardId(); }
+    @Override @Transactional
+    public void deleteAward(Long awardId) { hrMapper.deleteAward(awardId); }
+    @Override
+    public List<HrAwardVO> findAwardByUser(Long userId) { return hrMapper.listAwardByUser(userId); }
 
     private String nullSafe(String s) { return s == null ? "" : s; }
 }

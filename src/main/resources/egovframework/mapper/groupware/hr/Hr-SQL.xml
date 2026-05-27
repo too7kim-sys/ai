@@ -195,4 +195,123 @@
           JOIN gw_user u ON u.user_id = f.user_id
          WHERE f.fam_id = #{famId}
     </select>
+
+    <!-- ─────────────── 경력 ─────────────── -->
+    <resultMap id="careerMap" type="egovframework.groupware.hr.service.HrCareerVO">
+        <id property="careerId" column="career_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="companyNm" column="company_nm"/>
+        <result property="positionNm" column="position_nm"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    <insert id="insertCareer" parameterType="egovframework.groupware.hr.service.HrCareerVO"
+            useGeneratedKeys="true" keyProperty="careerId" keyColumn="career_id">
+        INSERT INTO gw_hr_career (user_id, company_nm, position_nm, start_dt, end_dt,
+                                  description, created_by)
+        VALUES (#{userId}, #{companyNm}, #{positionNm}, #{startDt}, #{endDt},
+                #{description}, #{createdBy})
+    </insert>
+    <delete id="deleteCareer">DELETE FROM gw_hr_career WHERE career_id = #{careerId}</delete>
+    <select id="listCareerByUser" resultMap="careerMap">
+        SELECT career_id, user_id, company_nm, position_nm, start_dt, end_dt,
+               description, created_at
+          FROM gw_hr_career
+         WHERE user_id = #{userId}
+         ORDER BY start_dt DESC NULLS LAST
+    </select>
+
+    <!-- ─────────────── 학력 ─────────────── -->
+    <resultMap id="educationMap" type="egovframework.groupware.hr.service.HrEducationVO">
+        <id property="eduId" column="edu_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="schoolNm" column="school_nm"/>
+        <result property="major" column="major"/>
+        <result property="degreeCd" column="degree_cd"/>
+        <result property="degreeNm" column="degree_nm"/>
+        <result property="eduStatusCd" column="edu_status_cd"/>
+        <result property="eduStatusNm" column="edu_status_nm"/>
+        <result property="admissionDt" column="admission_dt"/>
+        <result property="graduationDt" column="graduation_dt"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    <insert id="insertEducation" parameterType="egovframework.groupware.hr.service.HrEducationVO"
+            useGeneratedKeys="true" keyProperty="eduId" keyColumn="edu_id">
+        INSERT INTO gw_hr_education (user_id, school_nm, major, degree_cd, edu_status_cd,
+                                     admission_dt, graduation_dt, created_by)
+        VALUES (#{userId}, #{schoolNm}, #{major}, #{degreeCd}, #{eduStatusCd},
+                #{admissionDt}, #{graduationDt}, #{createdBy})
+    </insert>
+    <delete id="deleteEducation">DELETE FROM gw_hr_education WHERE edu_id = #{eduId}</delete>
+    <select id="listEducationByUser" resultMap="educationMap">
+        SELECT e.edu_id, e.user_id, e.school_nm, e.major,
+               e.degree_cd, cd.code_nm AS degree_nm,
+               e.edu_status_cd, cs.code_nm AS edu_status_nm,
+               e.admission_dt, e.graduation_dt, e.created_at
+          FROM gw_hr_education e
+          LEFT JOIN gw_code cd ON cd.group_cd = 'HR_DEGREE'     AND cd.code_val = e.degree_cd
+          LEFT JOIN gw_code cs ON cs.group_cd = 'HR_EDU_STATUS' AND cs.code_val = e.edu_status_cd
+         WHERE e.user_id = #{userId}
+         ORDER BY e.graduation_dt DESC NULLS LAST, e.admission_dt DESC NULLS LAST
+    </select>
+
+    <!-- ─────────────── 교육이수 ─────────────── -->
+    <resultMap id="trainingMap" type="egovframework.groupware.hr.service.HrTrainingVO">
+        <id property="trnId" column="trn_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="courseNm" column="course_nm"/>
+        <result property="providerNm" column="provider_nm"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="hours" column="hours"/>
+        <result property="certNo" column="cert_no"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    <insert id="insertTraining" parameterType="egovframework.groupware.hr.service.HrTrainingVO"
+            useGeneratedKeys="true" keyProperty="trnId" keyColumn="trn_id">
+        INSERT INTO gw_hr_training (user_id, course_nm, provider_nm, start_dt, end_dt,
+                                    hours, cert_no, created_by)
+        VALUES (#{userId}, #{courseNm}, #{providerNm}, #{startDt}, #{endDt},
+                #{hours}, #{certNo}, #{createdBy})
+    </insert>
+    <delete id="deleteTraining">DELETE FROM gw_hr_training WHERE trn_id = #{trnId}</delete>
+    <select id="listTrainingByUser" resultMap="trainingMap">
+        SELECT trn_id, user_id, course_nm, provider_nm, start_dt, end_dt,
+               hours, cert_no, created_at
+          FROM gw_hr_training
+         WHERE user_id = #{userId}
+         ORDER BY end_dt DESC NULLS LAST, start_dt DESC NULLS LAST
+    </select>
+
+    <!-- ─────────────── 상벌 ─────────────── -->
+    <resultMap id="awardMap" type="egovframework.groupware.hr.service.HrAwardVO">
+        <id property="awardId" column="award_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="awardTypeCd" column="award_type_cd"/>
+        <result property="awardTypeNm" column="award_type_nm"/>
+        <result property="title" column="title"/>
+        <result property="occurredOn" column="occurred_on"/>
+        <result property="organization" column="organization"/>
+        <result property="reason" column="reason"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+    <insert id="insertAward" parameterType="egovframework.groupware.hr.service.HrAwardVO"
+            useGeneratedKeys="true" keyProperty="awardId" keyColumn="award_id">
+        INSERT INTO gw_hr_award (user_id, award_type_cd, title, occurred_on,
+                                 organization, reason, created_by)
+        VALUES (#{userId}, #{awardTypeCd}, #{title}, #{occurredOn},
+                #{organization}, #{reason}, #{createdBy})
+    </insert>
+    <delete id="deleteAward">DELETE FROM gw_hr_award WHERE award_id = #{awardId}</delete>
+    <select id="listAwardByUser" resultMap="awardMap">
+        SELECT a.award_id, a.user_id,
+               a.award_type_cd, c.code_nm AS award_type_nm,
+               a.title, a.occurred_on, a.organization, a.reason, a.created_at
+          FROM gw_hr_award a
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_AWARD_TYPE' AND c.code_val = a.award_type_cd
+         WHERE a.user_id = #{userId}
+         ORDER BY a.occurred_on DESC
+    </select>
 </mapper>

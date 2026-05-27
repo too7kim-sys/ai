@@ -2,8 +2,12 @@ package egovframework.groupware.hr.mapper;
 
 import egovframework.groupware.hr.service.DeptVO;
 import egovframework.groupware.hr.service.FamilyVO;
+import egovframework.groupware.hr.service.HrAwardVO;
+import egovframework.groupware.hr.service.HrCareerVO;
+import egovframework.groupware.hr.service.HrEducationVO;
 import egovframework.groupware.hr.service.HrHistoryVO;
 import egovframework.groupware.hr.service.HrRecordVO;
+import egovframework.groupware.hr.service.HrTrainingVO;
 import egovframework.groupware.hr.service.PositionVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -37,4 +41,24 @@ public interface HrMapper {
     int deleteFamily(@Param("famId") Long famId);
     List<FamilyVO> listFamilyByUser(@Param("userId") Long userId);
     FamilyVO findFamily(@Param("famId") Long famId);
+
+    /* 경력 */
+    int insertCareer(HrCareerVO vo);
+    int deleteCareer(@Param("careerId") Long careerId);
+    List<HrCareerVO> listCareerByUser(@Param("userId") Long userId);
+
+    /* 학력 */
+    int insertEducation(HrEducationVO vo);
+    int deleteEducation(@Param("eduId") Long eduId);
+    List<HrEducationVO> listEducationByUser(@Param("userId") Long userId);
+
+    /* 교육이수 */
+    int insertTraining(HrTrainingVO vo);
+    int deleteTraining(@Param("trnId") Long trnId);
+    List<HrTrainingVO> listTrainingByUser(@Param("userId") Long userId);
+
+    /* 상벌 */
+    int insertAward(HrAwardVO vo);
+    int deleteAward(@Param("awardId") Long awardId);
+    List<HrAwardVO> listAwardByUser(@Param("userId") Long userId);
 }

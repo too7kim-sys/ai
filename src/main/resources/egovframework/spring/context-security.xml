@@ -17,7 +17,17 @@
         <intercept-url pattern="/images/**" access="permitAll"/>
         <intercept-url pattern="/webjars/**" access="permitAll"/>
 
+        <intercept-url pattern="/sys/user/create.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/sys/user/edit.do"   access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/sys/**" access="hasRole('ADMIN')"/>
+        <intercept-url pattern="/hr/career/**"    access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/career.do"    access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/education/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/education.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/training/**"  access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/training.do"  access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/award/**"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/award.do"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/mail/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/attendance/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/notice/write.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>

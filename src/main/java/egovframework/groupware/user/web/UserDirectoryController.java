@@ -3,6 +3,7 @@ package egovframework.groupware.user.web;
 import egovframework.groupware.auth.security.CustomUserDetails;
 import egovframework.groupware.cmm.Paging;
 import egovframework.groupware.hr.service.HrService;
+import egovframework.groupware.sys.service.CodeService;
 import egovframework.groupware.user.service.UserService;
 import egovframework.groupware.user.service.UserVO;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,10 +19,13 @@ public class UserDirectoryController {
 
     private final UserService userService;
     private final HrService hrService;
+    private final CodeService codeService;
 
-    public UserDirectoryController(UserService userService, HrService hrService) {
+    public UserDirectoryController(UserService userService, HrService hrService,
+                                   CodeService codeService) {
         this.userService = userService;
         this.hrService = hrService;
+        this.codeService = codeService;
     }
 
     @GetMapping("/user/list.do")
@@ -55,10 +59,21 @@ public class UserDirectoryController {
                 || "HR_MANAGER".equals(me.getRoleCd());
         model.addAttribute("user", user);
         model.addAttribute("canViewSensitive", canViewSensitive);
+        boolean canManage = "ADMIN".equals(me.getRoleCd()) || "HR_MANAGER".equals(me.getRoleCd());
+        model.addAttribute("canManage", canManage);
         if (canViewSensitive) {
             model.addAttribute("histories", hrService.findHistoryByUser(userId));
             model.addAttribute("records", hrService.findRecordsByUser(userId));
             model.addAttribute("families", hrService.findFamilyByUser(userId));
+            model.addAttribute("careers", hrService.findCareerByUser(userId));
+            model.addAttribute("educations", hrService.findEducationByUser(userId));
+            model.addAttribute("trainings", hrService.findTrainingByUser(userId));
+            model.addAttribute("awards", hrService.findAwardByUser(userId));
+        }
+        if (canManage) {
+            model.addAttribute("degreeCodes",  codeService.findCodes("HR_DEGREE"));
+            model.addAttribute("eduStatusCodes", codeService.findCodes("HR_EDU_STATUS"));
+            model.addAttribute("awardTypeCodes", codeService.findCodes("HR_AWARD_TYPE"));
         }
         return "user/profile";
     }

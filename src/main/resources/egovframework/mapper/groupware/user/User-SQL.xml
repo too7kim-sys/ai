@@ -109,6 +109,7 @@
                dept_id = #{deptId},
                position_id = #{positionId},
                role_cd = #{roleCd},
+               hire_date = #{hireDate},
                bank_cd = #{bankCd},
                bank_account = #{bankAccount},
                updated_at = CURRENT_TIMESTAMP
