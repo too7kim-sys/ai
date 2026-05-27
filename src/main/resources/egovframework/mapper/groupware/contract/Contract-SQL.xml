@@ -35,6 +35,8 @@
         <result property="probationMonths" column="probation_months"/>
         <result property="salaryContractId" column="salary_contract_id"/>
         <result property="annualSalary" column="annual_salary"/>
+        <result property="monthlyBaseSal" column="monthly_base_sal"/>
+        <result property="paymentDay" column="payment_day"/>
         <result property="insuranceAppliedJson" column="insurance_applied_json"/>
         <result property="specialTerms" column="special_terms"/>
         <result property="statusCd" column="status_cd"/>
@@ -110,7 +112,7 @@
                u.name AS user_name, u.email,
                d.dept_nm,
                t.template_nm,
-               sc.annual_salary
+               sc.annual_salary, sc.monthly_base_sal, sc.payment_day
           FROM gw_employment_contract ec
           JOIN gw_user u ON u.user_id = ec.user_id
           LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
@@ -121,7 +123,7 @@
 
     <select id="listAll" resultMap="contractMap">
         SELECT ec.*, u.name AS user_name, u.email, d.dept_nm, t.template_nm,
-               sc.annual_salary
+               sc.annual_salary, sc.monthly_base_sal, sc.payment_day
           FROM gw_employment_contract ec
           JOIN gw_user u ON u.user_id = ec.user_id
           LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
@@ -141,7 +143,7 @@
 
     <select id="listByUser" resultMap="contractMap">
         SELECT ec.*, u.name AS user_name, u.email, d.dept_nm, t.template_nm,
-               sc.annual_salary
+               sc.annual_salary, sc.monthly_base_sal, sc.payment_day
           FROM gw_employment_contract ec
           JOIN gw_user u ON u.user_id = ec.user_id
           LEFT JOIN gw_dept d ON d.dept_id = u.dept_id

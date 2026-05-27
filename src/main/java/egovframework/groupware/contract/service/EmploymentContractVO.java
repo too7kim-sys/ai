@@ -33,6 +33,10 @@ public class EmploymentContractVO extends BaseVO {
     private Integer probationMonths;
     private Long salaryContractId;
     private BigDecimal annualSalary;
+    /** 연결된 급여계약의 월 기본급 (JOIN 결과 — 화면 표시용). */
+    private BigDecimal monthlyBaseSal;
+    /** 연결된 급여계약의 지급일 (JOIN 결과 — 화면 표시용). */
+    private Integer paymentDay;
     private String insuranceAppliedJson;
     private String specialTerms;
     private String statusCd;
