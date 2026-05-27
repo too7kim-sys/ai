@@ -29,8 +29,10 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <!-- 일반 조회용 컬럼 집합 — 비밀번호 해시는 메모리 노출 최소화를 위해 제외.
+         로그인(findByEmail) 흐름만 별도 fragment userColumnsForAuth 를 사용한다. -->
     <sql id="userColumns">
-        u.user_id, u.email, u.password_hash, u.name, u.phone,
+        u.user_id, u.email, u.name, u.phone,
         u.dept_id, d.dept_nm,
         u.position_id, p.position_nm,
         u.role_cd, r.role_nm,
@@ -41,8 +43,12 @@
         u.created_at
     </sql>
 
+    <sql id="userColumnsForAuth">
+        <include refid="userColumns"/>, u.password_hash
+    </sql>
+
     <select id="findByEmail" resultMap="userMap">
-        SELECT <include refid="userColumns"/>
+        SELECT <include refid="userColumnsForAuth"/>
           FROM gw_user u
           LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
           LEFT JOIN gw_position p ON p.position_id = u.position_id

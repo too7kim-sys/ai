@@ -73,6 +73,7 @@
         <headers>
             <hsts include-subdomains="true" max-age-seconds="31536000"/>
             <frame-options policy="SAMEORIGIN"/>
+            <referrer-policy policy="strict-origin-when-cross-origin"/>
         </headers>
     </http>
 
