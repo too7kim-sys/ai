@@ -119,12 +119,15 @@
                 <i class="bi bi-list"></i>
             </button>
 
-            <!-- 통합 검색 (직원 디렉토리) -->
-            <form class="topbar-search d-none d-md-flex" method="get"
-                  action="${pageContext.request.contextPath}/user/list.do">
+            <!-- 통합 검색 (직원 디렉토리) — 클릭하면 사원 선택 팝업이 열리고
+                 선택 즉시 해당 직원 프로필로 이동한다. -->
+            <div class="topbar-search d-none d-md-flex" role="search">
                 <i class="bi bi-search"></i>
-                <input type="text" name="keyword" placeholder="직원 검색..." autocomplete="off"/>
-            </form>
+                <input type="text" id="topbarUserSearch" class="topbar-search-trigger"
+                       placeholder="직원 검색..." readonly autocomplete="off"
+                       onclick="openUserPicker({onSelect: function(u){ location.href='${pageContext.request.contextPath}/user/profile.do?userId=' + u.userId; }})"
+                       style="cursor:pointer"/>
+            </div>
 
             <div class="ms-auto d-flex align-items-center gap-1">
                 <!-- 검색 (모바일) -->
@@ -374,6 +377,47 @@
         }
         setInterval(poll, 30000);
     })();
+</script>
+
+<script>
+/* ────────────────────────────────────────────────────────────────
+ * 전역 Enter → submit 차단
+ *
+ * 일반적인 입력 화면에서 사용자가 입력 도중 Enter 키를 누르면 폼이
+ * 의도치 않게 제출되어 빈 hidden 값·잘못된 LocalDate 등으로 인해
+ * 500 이 발생하던 패턴을 방지한다.
+ *
+ * 정책:
+ *  - GET 메서드 form (대부분 검색 폼)             — Enter 허용
+ *  - role="search" / data-enter-submit="true"      — Enter 허용
+ *  - textarea, button, [type=submit/button]        — 자체 동작
+ *  - input 이 1 개뿐인 인라인 POST form (댓글·일괄수정 류) — Enter 허용
+ *  - 그 외 POST form 안의 input 에서 Enter         — 차단
+ *
+ * form="..." 속성으로 외부 form 에 격리된 입력은 closest('form') 이
+ * 찾지 못해 자연스럽게 통과한다(예: 사원 선택 모달 검색창).
+ * ──────────────────────────────────────────────────────────────── */
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var t = e.target;
+    if (!t || !t.tagName) return;
+    var tag = t.tagName.toLowerCase();
+    if (tag === 'textarea' || tag === 'button') return;
+    var type = (t.type || '').toLowerCase();
+    if (type === 'submit' || type === 'button') return;
+    var form = (t.form && t.form.tagName) ? t.form : (t.closest ? t.closest('form') : null);
+    if (!form) return;
+    var method = (form.method || form.getAttribute('method') || 'get').toLowerCase();
+    if (method === 'get') return;
+    if (form.getAttribute('role') === 'search') return;
+    if (form.dataset && form.dataset.enterSubmit === 'true') return;
+    // 비-hidden 단순 input 이 1 개뿐이면 인라인 단축 submit 으로 간주해 허용
+    var inputs = form.querySelectorAll(
+        'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=checkbox]):not([type=radio]):not([disabled]):not([readonly])');
+    if (inputs.length <= 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+}, true);
 </script>
 
 <%-- 공통 사원 선택 모달 (전 화면 공유, openUserPicker(opts) 로 호출) --%>
