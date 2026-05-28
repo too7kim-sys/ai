@@ -48,12 +48,15 @@
     <div class="col-12"><label class="form-label">사유</label>
         <textarea class="form-control" name="reason" rows="3"></textarea></div>
     <div class="col-12">
-        <label class="form-label">결재선 (Ctrl+클릭 다중 선택, 미선택 시 관리자에게 자동 지정)</label>
-        <select class="form-select" name="approverIds" multiple size="6">
-            <c:forEach var="u" items="${approvers}">
-                <option value="${u.userId}">${u.name} (${u.roleNm} / ${u.deptNm})</option>
-            </c:forEach>
-        </select>
+        <label class="form-label">결재선 <small class="text-muted">(미선택 시 관리자에게 자동 지정)</small></label>
+        <div>
+            <button type="button" class="btn btn-outline-primary btn-sm"
+                    onclick="openUserPicker({multi:true, multiSelect:'leaveApprovers', chipsContainer:'leaveApproverChips'})">
+                <i class="bi bi-person-plus"></i> 결재선 사원 선택
+            </button>
+            <div id="leaveApproverChips" class="mt-2"></div>
+            <select id="leaveApprovers" name="approverIds" multiple class="d-none"></select>
+        </div>
     </div>
     <div class="col-12">
         <button class="btn btn-primary"><i class="bi bi-send"></i> 상신</button>

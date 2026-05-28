@@ -375,5 +375,8 @@
         setInterval(poll, 30000);
     })();
 </script>
+
+<%-- 공통 사원 선택 모달 (전 화면 공유, openUserPicker(opts) 로 호출) --%>
+<jsp:include page="/WEB-INF/jsp/cmm/_user-picker.jsp"/>
 </body>
 </html>

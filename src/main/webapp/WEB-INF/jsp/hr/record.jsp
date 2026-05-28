@@ -4,16 +4,17 @@
 <title>인사기록</title>
 <h2 class="mb-3"><i class="bi bi-journal-text"></i> 인사기록 카드</h2>
 
-<form class="row g-2 mb-3" method="get" action="${pageContext.request.contextPath}/hr/record.do">
-    <div class="col-md-4">
-        <select name="userId" class="form-select" onchange="this.form.submit()">
-            <option value="">대상자 선택...</option>
-            <c:forEach var="u" items="${users}">
-                <option value="${u.userId}" <c:if test="${userId == u.userId}">selected</c:if>>
-                    ${u.deptNm} - ${u.name} (${u.positionNm})
-                </option>
-            </c:forEach>
-        </select>
+<form class="row g-2 mb-3" method="get" action="${pageContext.request.contextPath}/hr/record.do" id="hrRecordPickForm">
+    <div class="col-md-5">
+        <div class="input-group">
+            <input type="hidden" name="userId" id="hrRecordUserId" value="${userId}"/>
+            <input type="text" id="hrRecordUserNm" class="form-control" readonly
+                   placeholder="대상자 선택..." value="${user != null ? user.name.concat(' (').concat(user.deptNm == null ? '' : user.deptNm).concat(')') : ''}"/>
+            <button type="button" class="btn btn-outline-primary"
+                    onclick="openUserPicker({hidden:'hrRecordUserId', display:'hrRecordUserNm', onSelect: function(){ document.getElementById('hrRecordPickForm').submit(); }})">
+                <i class="bi bi-person-search"></i> 사원 선택
+            </button>
+        </div>
     </div>
 </form>
 

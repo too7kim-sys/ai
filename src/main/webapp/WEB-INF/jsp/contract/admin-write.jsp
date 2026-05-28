@@ -15,8 +15,16 @@
     <div class="card mb-3">
         <div class="card-header"><i class="bi bi-person-badge"></i> 기본 정보</div>
         <div class="card-body row g-3">
-            <div class="col-md-3"><label class="form-label">사원 ID <span class="text-danger">*</span></label>
-                <input class="form-control" name="userId" value="${userId}" required/></div>
+            <div class="col-md-3"><label class="form-label">사원 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <input type="hidden" name="userId" id="contractUserId" value="${userId}" required/>
+                    <input type="text" id="contractUserNm" class="form-control" readonly placeholder="사원 선택"/>
+                    <button type="button" class="btn btn-outline-primary"
+                            onclick="openUserPicker({hidden:'contractUserId', display:'contractUserNm'})">
+                        <i class="bi bi-person-search"></i>
+                    </button>
+                </div>
+            </div>
             <div class="col-md-4"><label class="form-label">계약서 양식 <span class="text-danger">*</span></label>
                 <select class="form-select" name="templateId" required>
                     <c:forEach var="t" items="${templates}">

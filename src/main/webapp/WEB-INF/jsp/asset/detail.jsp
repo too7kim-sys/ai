@@ -63,12 +63,14 @@
                             <sec:csrfInput/>
                             <input type="hidden" name="assetId" value="${a.assetId}"/>
                             <div class="col-md-5">
-                                <select name="userId" class="form-select" required>
-                                    <option value="">사용자 선택...</option>
-                                    <c:forEach var="u" items="${users}">
-                                        <option value="${u.userId}">${u.name} (${u.deptNm})</option>
-                                    </c:forEach>
-                                </select>
+                                <div class="input-group">
+                                    <input type="hidden" id="assetAssignUserId" name="userId" required/>
+                                    <input type="text" id="assetAssignUserNm" class="form-control" readonly placeholder="사용자 선택..."/>
+                                    <button type="button" class="btn btn-outline-primary"
+                                            onclick="openUserPicker({hidden:'assetAssignUserId', display:'assetAssignUserNm'})">
+                                        <i class="bi bi-person-search"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-5"><input type="text" name="memo" class="form-control" placeholder="메모"/></div>
                             <div class="col-md-2 d-grid"><button class="btn btn-success">지급</button></div>

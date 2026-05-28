@@ -9,14 +9,14 @@
     <div class="card-body">
         <div class="mb-3">
             <label class="form-label">받는 사람</label>
-            <select name="receiverId" class="form-select" required>
-                <option value="">선택...</option>
-                <c:forEach var="u" items="${users}">
-                    <option value="${u.userId}" <c:if test="${receiverId == u.userId}">selected</c:if>>
-                        ${u.deptNm} - ${u.name} (${u.positionNm})
-                    </option>
-                </c:forEach>
-            </select>
+            <div class="input-group">
+                <input type="hidden" id="msgReceiverId" name="receiverId" value="${receiverId}" required/>
+                <input type="text" id="msgReceiverNm" class="form-control" readonly placeholder="사원 선택"/>
+                <button type="button" class="btn btn-outline-primary"
+                        onclick="openUserPicker({hidden:'msgReceiverId', display:'msgReceiverNm'})">
+                    <i class="bi bi-person-search"></i> 사원 선택
+                </button>
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label">내용</label>

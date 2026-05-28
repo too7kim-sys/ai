@@ -4,14 +4,20 @@
 <title>인사이력</title>
 <h2 class="mb-3"><i class="bi bi-clock-history"></i> 인사이력</h2>
 
-<form class="row g-2 mb-3" method="get" action="${pageContext.request.contextPath}/hr/history.do">
-    <div class="col-md-4">
-        <select name="userId" class="form-select" onchange="this.form.submit()">
-            <option value="">전체 직원</option>
-            <c:forEach var="u" items="${users}">
-                <option value="${u.userId}" <c:if test="${userId == u.userId}">selected</c:if>>${u.deptNm} - ${u.name}</option>
-            </c:forEach>
-        </select>
+<form class="row g-2 mb-3" method="get" action="${pageContext.request.contextPath}/hr/history.do" id="hrHistoryPickForm">
+    <div class="col-md-5">
+        <div class="input-group">
+            <input type="hidden" name="userId" id="hrHistoryUserId" value="${userId}"/>
+            <input type="text" id="hrHistoryUserNm" class="form-control" readonly placeholder="전체 직원 (선택 시 해당 직원만)"
+                   value="${user != null ? user.name : ''}"/>
+            <button type="button" class="btn btn-outline-primary"
+                    onclick="openUserPicker({hidden:'hrHistoryUserId', display:'hrHistoryUserNm', onSelect:function(){ document.getElementById('hrHistoryPickForm').submit(); }})">
+                <i class="bi bi-person-search"></i> 사원 선택
+            </button>
+            <c:if test="${not empty userId}">
+                <a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/hr/history.do">전체</a>
+            </c:if>
+        </div>
     </div>
     <div class="col-md-3">
         <select name="changeTypeCd" class="form-select" onchange="this.form.submit()">

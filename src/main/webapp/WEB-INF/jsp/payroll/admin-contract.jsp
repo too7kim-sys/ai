@@ -7,7 +7,16 @@
 <div class="card mb-3"><div class="card-header bg-light">신규 계약 등록</div><div class="card-body">
     <form method="post" action="${pageContext.request.contextPath}/payroll/admin/contract.do" class="row g-2 align-items-end">
         <sec:csrfInput/>
-        <div class="col-md-2"><label class="form-label small">사용자 ID</label><input class="form-control" name="userId" required/></div>
+        <div class="col-md-3"><label class="form-label small">사원</label>
+            <div class="input-group input-group-sm">
+                <input type="hidden" id="salaryContractUserId" name="userId" required/>
+                <input type="text" id="salaryContractUserNm" class="form-control" readonly placeholder="사원 선택"/>
+                <button type="button" class="btn btn-outline-primary"
+                        onclick="openUserPicker({hidden:'salaryContractUserId', display:'salaryContractUserNm'})">
+                    <i class="bi bi-person-search"></i>
+                </button>
+            </div>
+        </div>
         <div class="col-md-2"><label class="form-label small">시작일</label><input class="form-control" type="date" name="startDt" required/></div>
         <div class="col-md-3"><label class="form-label small">연봉 (원)</label><input class="form-control" type="number" name="annualSalary" required placeholder="48000000"/></div>
         <div class="col-md-2"><label class="form-label small">분할</label>
