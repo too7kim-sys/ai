@@ -1,22 +1,20 @@
 package egovframework.groupware.contract.web;
 
 import egovframework.groupware.auth.security.CustomUserDetails;
+import egovframework.groupware.cmm.web.DownloadSupport;
 import egovframework.groupware.contract.service.ContractService;
 import egovframework.groupware.contract.service.EmploymentContractVO;
 import egovframework.groupware.payroll.service.PayrollService;
 import egovframework.groupware.payroll.service.SalaryContractVO;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
 @Controller
@@ -57,15 +55,19 @@ public class ContractController {
     }
 
     @GetMapping("/contract/my/pdf.do")
-    public ResponseEntity<byte[]> myPdf(@AuthenticationPrincipal CustomUserDetails me,
-                                        @RequestParam Long contractId) {
+    public void myPdf(@AuthenticationPrincipal CustomUserDetails me,
+                      @RequestParam Long contractId,
+                      HttpServletResponse resp) throws IOException {
         EmploymentContractVO c = service.findById(contractId);
-        if (c == null || !c.getUserId().equals(me.getUserId())) return ResponseEntity.status(403).build();
+        // 본인 계약 또는 HR / ADMIN 만 다운로드 가능
+        boolean owner = c != null && c.getUserId().equals(me.getUserId());
+        boolean hr = "ADMIN".equals(me.getRoleCd()) || "HR_MANAGER".equals(me.getRoleCd());
+        if (c == null || (!owner && !hr)) { resp.sendError(403); return; }
         byte[] pdf = service.generatePdf(contractId);
-        String fname = URLEncoder.encode("근로계약서-" + c.getContractNo() + ".pdf", StandardCharsets.UTF_8);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fname)
-            .contentType(MediaType.APPLICATION_PDF).body(pdf);
+        // ResponseEntity<byte[]> 는 Tomcat 7(Servlet 3.0) 에 없는 setContentLengthLong
+        // 을 호출해 NoSuchMethodError 가 발생하므로 직접 응답을 작성한다.
+        DownloadSupport.write(resp, "근로계약서-" + c.getContractNo() + ".pdf",
+                "application/pdf", pdf);
     }
 
     /* ------------------ HR 관리 ------------------ */
