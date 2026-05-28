@@ -22,6 +22,7 @@
             <div class="modal-body">
                 <div class="input-group input-group-sm mb-2">
                     <input type="text" id="gwUserPickerKeyword" class="form-control"
+                           form="__gw_user_picker_isolated__"
                            placeholder="이름·이메일·부서 검색"/>
                     <button class="btn btn-outline-primary" type="button" id="gwUserPickerSearchBtn">
                         <i class="bi bi-search"></i> 검색
@@ -195,13 +196,23 @@
     };
 
     // 키워드 입력 동작 (Enter / 디바운스)
+    // - Enter 시 form 제출이 일어나지 않도록 keydown 에서 즉시 preventDefault.
+    //   (input 자체에도 form="__gw_user_picker_isolated__" 로 부모 form 격리)
+    // - 그 외 키는 keyup 단계에서 300ms 디바운스로 자동 검색.
     var timer = null;
     document.addEventListener('DOMContentLoaded', function () {
         var kw = $('gwUserPickerKeyword');
         if (!kw) return;
         $('gwUserPickerSearchBtn').addEventListener('click', search);
+        kw.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                search();
+            }
+        });
         kw.addEventListener('keyup', function (e) {
-            if (e.key === 'Enter') { e.preventDefault(); search(); return; }
+            if (e.key === 'Enter') return;
             clearTimeout(timer);
             timer = setTimeout(search, 300);
         });
