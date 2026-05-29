@@ -120,14 +120,56 @@ public class ContractServiceImpl implements ContractService {
 
     private Map<String, Object> vars(EmploymentContractVO c) {
         Map<String, Object> v = new HashMap<>();
-        v.put("userName", c.getUserName());
-        v.put("workplace", c.getWorkplace());
-        v.put("jobDescription", c.getJobDescription());
-        v.put("startDt", c.getStartDt());
-        v.put("endDt", c.getEndDt() == null ? "기간의 정함이 없음" : c.getEndDt());
-        v.put("workHoursPerWeek", c.getWorkHoursPerWeek());
-        v.put("annualSalary", c.getAnnualSalary() == null ? "" : WON.format(c.getAnnualSalary()));
         v.put("companyName", "사내 그룹웨어");
+        v.put("contractNo", nz(c.getContractNo()));
+        v.put("userName", nz(c.getUserName()));
+        v.put("deptNm", nz(c.getDeptNm()));
+        v.put("email", nz(c.getEmail()));
+        v.put("contractTypeCd", nz(c.getContractTypeCd()));
+        v.put("contractTypeNm", typeNm(c.getContractTypeCd()));
+        v.put("workplace", nz(c.getWorkplace()));
+        v.put("jobDescription", nz(c.getJobDescription()));
+        v.put("startDt", c.getStartDt() == null ? "" : c.getStartDt().toString());
+        v.put("endDt", c.getEndDt() == null ? "기간의 정함이 없음" : c.getEndDt().toString());
+        v.put("workHoursPerWeek", c.getWorkHoursPerWeek() == null ? "40" : c.getWorkHoursPerWeek().toPlainString());
+        v.put("workStartTime", c.getWorkStartTime() == null ? "09:00" : c.getWorkStartTime());
+        v.put("workEndTime", c.getWorkEndTime() == null ? "18:00" : c.getWorkEndTime());
+        v.put("breakMinutes", c.getBreakMinutes() == null ? 60 : c.getBreakMinutes());
+        v.put("weeklyHoliday", c.getWeeklyHoliday() == null ? "일요일" : c.getWeeklyHoliday());
+        v.put("annualPaidLeaveDays", c.getAnnualPaidLeaveDays() == null ? 15 : c.getAnnualPaidLeaveDays());
+        v.put("probationMonths", c.getProbationMonths() == null ? 0 : c.getProbationMonths());
+        v.put("annualSalary", c.getAnnualSalary() == null ? "(별도 협의)" : WON.format(c.getAnnualSalary()));
+        v.put("monthlyBaseSal", c.getMonthlyBaseSal() == null ? "(연봉 ÷ 12)" : WON.format(c.getMonthlyBaseSal()));
+        v.put("paymentDay", c.getPaymentDay() == null ? "25" : String.valueOf(c.getPaymentDay()));
+        v.put("insuranceApplied", insuranceLabel(c.getInsuranceAppliedJson()));
+        v.put("specialTerms", c.getSpecialTerms() == null || c.getSpecialTerms().isBlank()
+                ? "(별도 약정 없음)" : c.getSpecialTerms());
         return v;
+    }
+
+    private static String nz(String s) { return s == null ? "" : s; }
+
+    private static String typeNm(String cd) {
+        if (cd == null) return "";
+        switch (cd) {
+            case "REGULAR":    return "정규직";
+            case "FIXED_TERM": return "기간제";
+            case "PART_TIME":  return "단시간";
+            case "TEMP":       return "시용(수습)";
+            case "INTERN":     return "인턴";
+            default:           return cd;
+        }
+    }
+
+    /** insurance_applied_json — 단순 substring 검사로 한글 라벨 변환. */
+    private static String insuranceLabel(String json) {
+        if (json == null || json.isBlank()) return "(미지정)";
+        StringBuilder sb = new StringBuilder();
+        if (json.contains("\"NP\":true")) sb.append("국민연금, ");
+        if (json.contains("\"HI\":true")) sb.append("건강보험(장기요양 포함), ");
+        if (json.contains("\"EI\":true")) sb.append("고용보험, ");
+        if (json.contains("\"WC\":true")) sb.append("산재보험");
+        String s = sb.toString().replaceAll(", $", "").trim();
+        return s.isEmpty() ? "(미적용)" : s;
     }
 }
