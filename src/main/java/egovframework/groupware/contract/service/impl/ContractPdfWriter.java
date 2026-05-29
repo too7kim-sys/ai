@@ -1,7 +1,6 @@
 package egovframework.groupware.contract.service.impl;
 
 import com.lowagie.text.Document;
-import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
 import com.lowagie.text.PageSize;
@@ -81,29 +80,22 @@ public class ContractPdfWriter {
 
     public byte[] write(EmploymentContractVO c, String renderedHtml) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 40, 40, 50, 40);
+        // 본문에 큰 표가 들어가므로 좌우/하단 마진을 넉넉히 잡아 자르기를 방지.
+        Document doc = new Document(PageSize.A4, 48, 48, 56, 56);
         PdfWriter.getInstance(doc, baos);
 
-        Font titleFont;
         Font smallFont;
         try {
             BaseFont bf = loadKoreanBaseFont();
-            titleFont = new Font(bf, 18, Font.BOLD);
             smallFont = new Font(bf, 9);
         } catch (Exception ex) {
-            titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
             smallFont = FontFactory.getFont(FontFactory.HELVETICA, 9);
         }
 
         doc.open();
-        Paragraph title = new Paragraph("근로계약서", titleFont);
-        title.setAlignment(Element.ALIGN_CENTER);
-        doc.add(title);
-        doc.add(new Paragraph(" ", smallFont));
+        // 타이틀·갑/을 서명란은 V15 템플릿 본문이 직접 그리므로 PdfWriter 가 별도로
+        // 그리지 않는다(중복·겹침 방지). renderedHtml 이 비어 있는 경우에만 폴백 출력.
         try {
-            // HTMLWorker 에 한글 폰트를 명시적으로 적용.
-            // body 의 face 를 등록한 NanumGothic 으로, encoding 을 IDENTITY_H 로 두지 않으면
-            // HTMLWorker 가 기본 Helvetica 를 사용해 한글 문자가 모두 빈 자리로 떨어진다.
             StyleSheet css = new StyleSheet();
             css.loadTagStyle("body", "face", FONT_ALIAS);
             css.loadTagStyle("body", "encoding", BaseFont.IDENTITY_H);
@@ -113,13 +105,10 @@ public class ContractPdfWriter {
         } catch (Exception ex) {
             doc.add(new Paragraph(renderedHtml == null ? "" : renderedHtml, smallFont));
         }
-        doc.add(new Paragraph(" ", smallFont));
-        doc.add(new Paragraph("계약번호: " + c.getContractNo(), smallFont));
-        doc.add(new Paragraph("상태: " + c.getStatusCd(), smallFont));
-        doc.add(new Paragraph("\n\n갑: 회사 _____________________ (인)", smallFont));
-        doc.add(new Paragraph("을: " + (c.getUserName() == null ? "" : c.getUserName()) + " _____________________ (인)", smallFont));
+        // 서명 일시는 본문에 동적 변수가 없으므로 후처리로 표시.
         if (c.getEmployeeSignedAt() != null) {
-            doc.add(new Paragraph("\n근로자 서명 일시: " + c.getEmployeeSignedAt(), smallFont));
+            doc.add(new Paragraph(" ", smallFont));
+            doc.add(new Paragraph("근로자 서명 일시: " + c.getEmployeeSignedAt(), smallFont));
         }
         doc.close();
         return baos.toByteArray();
