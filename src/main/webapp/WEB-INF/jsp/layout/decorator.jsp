@@ -422,5 +422,101 @@ document.addEventListener('keydown', function (e) {
 
 <%-- 공통 사원 선택 모달 (전 화면 공유, openUserPicker(opts) 로 호출) --%>
 <jsp:include page="/WEB-INF/jsp/cmm/_user-picker.jsp"/>
+
+<%-- 단축키 도움말 모달 (전역, '?' 키로 호출) --%>
+<div class="modal fade" id="gwShortcutsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-keyboard"></i> 키보드 단축키</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="shortcuts-table w-100">
+                    <tr><td><kbd>/</kbd></td><td>직원 검색</td></tr>
+                    <tr><td><kbd>?</kbd></td><td>이 도움말</td></tr>
+                    <tr><td><kbd>g</kbd> <kbd>d</kbd></td><td>대시보드</td></tr>
+                    <tr><td><kbd>g</kbd> <kbd>n</kbd></td><td>공지사항</td></tr>
+                    <tr><td><kbd>g</kbd> <kbd>l</kbd></td><td>내 휴가</td></tr>
+                    <tr><td><kbd>g</kbd> <kbd>a</kbd></td><td>결재 대기함</td></tr>
+                    <tr><td><kbd>g</kbd> <kbd>m</kbd></td><td>받은 쪽지</td></tr>
+                    <tr><td><kbd>g</kbd> <kbd>c</kbd></td><td>일정</td></tr>
+                    <tr><td><kbd>Esc</kbd></td><td>모달 닫기 / 검색 취소</td></tr>
+                </table>
+                <p class="small text-muted mt-3 mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    입력창 안에서는 단축키가 동작하지 않습니다. 다른 곳을 클릭한 뒤 사용하세요.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ────────────────────────────────────────────────────────────────
+ * 전역 키보드 단축키
+ *  / : 직원 검색 모달
+ *  ? : 단축키 도움말
+ *  g d / g n / g l / g a / g m / g c : 페이지 이동
+ *  Esc : 자동 (Bootstrap 모달이 처리)
+ *
+ *  주의: textarea / input / select / contenteditable 에서는 입력을
+ *  방해하지 않도록 단축키를 무시한다.
+ * ──────────────────────────────────────────────────────────────── */
+(function () {
+    var ctx = '${pageContext.request.contextPath}';
+    var gMap = {
+        d: '/dashboard.do',
+        n: '/notice/list.do',
+        l: '/leave/my.do',
+        a: '/approval/pending.do',
+        m: '/message/inbox.do',
+        c: '/calendar/main.do'
+    };
+    var awaitingG = false;
+    var gTimer = null;
+
+    function isTypingTarget(t) {
+        if (!t || !t.tagName) return false;
+        var tag = t.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+        if (t.isContentEditable) return true;
+        return false;
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (isTypingTarget(e.target)) return;
+
+        if (e.key === '/') {
+            e.preventDefault();
+            if (typeof openUserPicker === 'function') {
+                openUserPicker({
+                    onSelect: function (u) { location.href = ctx + '/user/profile.do?userId=' + u.userId; }
+                });
+            }
+            return;
+        }
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+            e.preventDefault();
+            var m = document.getElementById('gwShortcutsModal');
+            if (m) bootstrap.Modal.getOrCreateInstance(m).show();
+            return;
+        }
+        if (e.key === 'g' && !awaitingG) {
+            awaitingG = true;
+            clearTimeout(gTimer);
+            gTimer = setTimeout(function () { awaitingG = false; }, 1200);
+            return;
+        }
+        if (awaitingG) {
+            awaitingG = false;
+            clearTimeout(gTimer);
+            var url = gMap[e.key.toLowerCase()];
+            if (url) { e.preventDefault(); location.href = ctx + url; }
+        }
+    });
+})();
+</script>
 </body>
 </html>

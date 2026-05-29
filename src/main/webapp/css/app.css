@@ -755,3 +755,70 @@ body.dark-mode .form-select { background: var(--gw-surface-2); color: var(--gw-t
 body.dark-mode .table > thead { background: var(--gw-surface-2); }
 body.dark-mode .table > thead th { color: var(--gw-text-strong); border-bottom-color: var(--gw-border); }
 body.dark-mode .table-hover > tbody > tr:hover { background: rgba(79,70,229,.10); }
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  편의성 컴포넌트 — 빠른 액션 / 빈 상태 / 단축키 표시
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* ───── 빠른 액션 (대시보드 / 모듈 상단) ───── */
+.quick-actions .quick-action {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-decoration: none; color: var(--gw-text);
+    padding: .6rem .25rem; border-radius: var(--gw-radius);
+    transition: background .15s ease, transform .15s ease;
+}
+.quick-actions .quick-action:hover {
+    background: var(--gw-surface-2);
+    color: var(--gw-text-strong);
+    transform: translateY(-1px);
+}
+.quick-actions .qa-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 12px; font-size: 1.2rem;
+    margin-bottom: .35rem;
+}
+.quick-actions .qa-label { font-size: .82rem; font-weight: 500; }
+
+/* ───── 통계 카드 hover ───── */
+.stat-card { transition: transform .15s ease, box-shadow .15s ease; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--gw-shadow); }
+.widget-label { font-size: .78rem; color: var(--gw-muted); font-weight: 600; letter-spacing: -.01em; }
+.widget-value { font-size: 1.55rem; font-weight: 700; color: var(--gw-heading); line-height: 1.1; margin-top: .15rem; }
+.widget-trend { font-size: .72rem; margin-top: .35rem; }
+.widget-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 46px; height: 46px; border-radius: 12px; font-size: 1.3rem;
+}
+
+/* ───── 빈 상태 패턴 (.empty-state) ───── */
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem !important;
+    color: var(--gw-muted);
+    background: transparent !important;
+}
+.empty-state-icon {
+    display: block;
+    font-size: 2rem;
+    color: var(--gw-border-strong);
+    margin-bottom: .5rem;
+}
+.empty-state-title { font-size: .92rem; font-weight: 600; color: var(--gw-text-strong); }
+.empty-state-desc { margin-top: .25rem; }
+
+/* ───── 단축키 시각화 (kbd) ───── */
+kbd {
+    background: var(--gw-surface);
+    border: 1px solid var(--gw-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    color: var(--gw-text-strong);
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: .72rem;
+    padding: .1rem .4rem;
+    box-shadow: 0 1px 0 rgba(15,23,42,.05);
+}
+
+/* ───── 단축키 도움말 모달 ───── */
+.shortcuts-table td { padding: .45rem .6rem; vertical-align: middle; border: 0; }
+.shortcuts-table td:first-child { width: 35%; }
