@@ -96,6 +96,8 @@ public class SysUserAdminController {
                        @RequestParam(required = false) Long deptId,
                        @RequestParam(required = false) Long positionId,
                        @RequestParam(required = false) String hireDate,
+                       @RequestParam(required = false) String resignDate,
+                       @RequestParam(required = false) String resignReason,
                        @RequestParam(required = false) String bankCd,
                        @RequestParam(required = false) String bankAccount,
                        HttpServletRequest req,
@@ -111,6 +113,8 @@ public class SysUserAdminController {
         vo.setPositionId(positionId);
         vo.setRoleCd(before.getRoleCd());            // 역할 변경은 별도 액션
         if (hireDate != null && !hireDate.isBlank()) vo.setHireDate(LocalDate.parse(hireDate));
+        if (resignDate != null && !resignDate.isBlank()) vo.setResignDate(LocalDate.parse(resignDate));
+        vo.setResignReason(resignReason);
         vo.setBankCd(bankCd);
         vo.setBankAccount(bankAccount);
         userService.update(vo);

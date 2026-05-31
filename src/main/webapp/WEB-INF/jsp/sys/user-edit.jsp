@@ -22,9 +22,18 @@
             <label class="form-label">연락처</label>
             <input type="text" name="phone" class="form-control" value="${u.phone}"/>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-3">
             <label class="form-label">입사일</label>
             <input type="date" name="hireDate" class="form-control" value="${u.hireDate}"/>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">퇴사일 <span class="text-muted small">(공란=재직중)</span></label>
+            <input type="date" name="resignDate" class="form-control" value="${u.resignDate}"/>
+            <div class="form-text">퇴사일이 지정된 사용자는 다음 달 급여 생성 대상에서 제외되고, 퇴사일이 속한 달은 재직일수/월일수로 일할 계산됩니다.</div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">퇴사 사유</label>
+            <input type="text" name="resignReason" class="form-control" value="${u.resignReason}" placeholder="개인 사유 / 계약 만료 / 권고 사직 등"/>
         </div>
         <div class="col-md-6">
             <label class="form-label">부서</label>

@@ -16,6 +16,8 @@
         <result property="roleCd" column="role_cd"/>
         <result property="roleNm" column="role_nm"/>
         <result property="hireDate" column="hire_date"/>
+        <result property="resignDate" column="resign_date"/>
+        <result property="resignReason" column="resign_reason"/>
         <result property="bankCd" column="bank_cd"/>
         <result property="bankAccount" column="bank_account"/>
         <result property="useYn" column="use_yn"/>
@@ -36,7 +38,8 @@
         u.dept_id, d.dept_nm,
         u.position_id, p.position_nm,
         u.role_cd, r.role_nm,
-        u.hire_date, u.bank_cd, u.bank_account, u.use_yn,
+        u.hire_date, u.resign_date, u.resign_reason,
+        u.bank_cd, u.bank_account, u.use_yn,
         u.pwd_fail_cnt, u.locked_yn, u.locked_at,
         u.pwd_changed_at, u.pwd_expire_at,
         u.last_login_at, u.last_login_ip,
@@ -116,6 +119,8 @@
                position_id = #{positionId},
                role_cd = #{roleCd},
                hire_date = #{hireDate},
+               resign_date = #{resignDate},
+               resign_reason = #{resignReason},
                bank_cd = #{bankCd},
                bank_account = #{bankAccount},
                updated_at = CURRENT_TIMESTAMP

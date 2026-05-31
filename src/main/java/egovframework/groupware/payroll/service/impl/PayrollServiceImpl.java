@@ -7,13 +7,17 @@ import egovframework.groupware.mail.service.MailService;
 import egovframework.groupware.payroll.mapper.BonusMapper;
 import egovframework.groupware.payroll.mapper.PayrollMapper;
 import egovframework.groupware.payroll.service.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +26,8 @@ import java.util.Map;
 
 @Service
 public class PayrollServiceImpl implements PayrollService {
+
+    private static final Logger log = LoggerFactory.getLogger(PayrollServiceImpl.class);
 
     private final PayrollMapper mapper;
     private final BonusMapper bonusMapper;
@@ -42,24 +48,55 @@ public class PayrollServiceImpl implements PayrollService {
     @Transactional
     public int generateForMonth(String payMonth) {
         YearMonth ym = YearMonth.parse(payMonth);
-        LocalDate on = ym.atEndOfMonth();
+        LocalDate firstOfMonth = ym.atDay(1);
+        LocalDate lastOfMonth  = ym.atEndOfMonth();
+        int monthDays = lastOfMonth.getDayOfMonth();
         int created = 0;
-        for (Long userId : mapper.findActiveUserIds()) {
+
+        // 자기퇴사 처리: resign_date < 급여월 첫날 인 사용자는 SQL 단계에서 제외.
+        // 퇴사일이 급여월 안에 있는 사용자에 대해서는 재직일수 / 월일수 로 일할 계산.
+        for (Map<String, Object> row : mapper.findPayrollEligibleUsers(firstOfMonth)) {
+            Long userId = ((Number) row.get("userId")).longValue();
+            Object resignObj = row.get("resignDate");
+            LocalDate resignDate = toLocalDate(resignObj);
+
             if (mapper.findByUserAndMonth(userId, payMonth) != null) continue;
-            SalaryContractVO sc = mapper.findCurrentContract(userId, on);
+            SalaryContractVO sc = mapper.findCurrentContract(userId, lastOfMonth);
             BigDecimal base = sc == null ? BigDecimal.ZERO : sc.getMonthlyBaseSal();
+
+            // 일할 계산 — 퇴사일이 이 달 안에 있을 때만
+            BigDecimal workDays = BigDecimal.valueOf(22);   // 기본 영업일
+            if (resignDate != null && !resignDate.isAfter(lastOfMonth)) {
+                int daysWorked = (int) ChronoUnit.DAYS.between(firstOfMonth, resignDate) + 1;
+                BigDecimal proration = BigDecimal.valueOf(daysWorked)
+                        .divide(BigDecimal.valueOf(monthDays), 6, RoundingMode.HALF_UP);
+                base = base.multiply(proration).setScale(0, RoundingMode.HALF_UP);
+                workDays = BigDecimal.valueOf(daysWorked);
+                log.info("Payroll proration for resigned user {} on {} : days={}/{} base→{}",
+                        userId, resignDate, daysWorked, monthDays, base);
+            }
+
             PayrollVO p = new PayrollVO();
             p.setUserId(userId);
             p.setPayMonth(payMonth);
             p.setContractId(sc == null ? null : sc.getContractId());
             p.setStatusCd("DRAFT");
-            p.setWorkDays(BigDecimal.valueOf(22));
+            p.setWorkDays(workDays);
             mapper.insertPayroll(p);
-            // 자동 계산
             recalculateInternal(p.getPayId(), Map.of(), base);
             created++;
         }
         return created;
+    }
+
+    private static LocalDate toLocalDate(Object o) {
+        if (o == null) return null;
+        if (o instanceof LocalDate) return (LocalDate) o;
+        if (o instanceof java.sql.Date) return ((java.sql.Date) o).toLocalDate();
+        if (o instanceof java.util.Date) {
+            return ((java.util.Date) o).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        }
+        return LocalDate.parse(o.toString());
     }
 
     @Override

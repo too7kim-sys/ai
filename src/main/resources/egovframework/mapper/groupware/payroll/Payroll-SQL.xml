@@ -111,6 +111,18 @@
         SELECT user_id FROM gw_user WHERE use_yn = 'Y' AND deleted_at IS NULL ORDER BY user_id
     </select>
 
+    <!-- 급여 생성 대상자(자기 자신 + 퇴사일) — 일할 계산을 위해 resign_date 함께 조회.
+         resign_date < 급여월 첫날 인 사용자는 SQL 단계에서 제외. -->
+    <select id="findPayrollEligibleUsers" resultType="map">
+        SELECT u.user_id AS "userId",
+               u.hire_date AS "hireDate",
+               u.resign_date AS "resignDate"
+          FROM gw_user u
+         WHERE u.use_yn = 'Y' AND u.deleted_at IS NULL
+           AND (u.resign_date IS NULL OR u.resign_date &gt;= #{firstOfMonth})
+         ORDER BY u.user_id
+    </select>
+
     <select id="findPayroll" resultMap="payrollMap">
         SELECT p.*, u.name AS user_name, d.dept_nm, u.email
           FROM gw_payroll p

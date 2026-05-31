@@ -35,6 +35,13 @@ public interface PayrollMapper {
     /** 월 일괄 생성용: 활성 사용자 조회 */
     List<Long> findActiveUserIds();
 
+    /**
+     * 월 일괄 생성용 — 활성 + 미퇴사 사용자와 입/퇴사일을 함께 조회.
+     * Map 키: userId (Long), hireDate (LocalDate), resignDate (LocalDate)
+     */
+    java.util.List<java.util.Map<String, Object>> findPayrollEligibleUsers(
+            @org.apache.ibatis.annotations.Param("firstOfMonth") java.time.LocalDate firstOfMonth);
+
     PayrollVO findPayroll(@Param("payId") Long payId);
 
     PayrollVO findByUserAndMonth(@Param("userId") Long userId,
