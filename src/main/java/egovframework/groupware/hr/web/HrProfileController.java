@@ -1,6 +1,7 @@
 package egovframework.groupware.hr.web;
 
 import egovframework.groupware.auth.security.CustomUserDetails;
+import egovframework.groupware.cmm.ApiException;
 import egovframework.groupware.hr.service.HrAwardVO;
 import egovframework.groupware.hr.service.HrCareerVO;
 import egovframework.groupware.hr.service.HrEducationVO;
@@ -19,15 +20,27 @@ import java.time.LocalDate;
  * 인사 프로필 부속 도메인(경력 · 학력 · 교육이수 · 상벌) 의 추가/삭제.
  *
  * <p>화면은 {@code /user/profile.do} 에 포함되어 있고, 본 컨트롤러는 그 폼들의
- * 처리만 담당한다. ADMIN / HR_MANAGER 만 수정할 수 있다.
+ * 처리만 담당한다.
+ *
+ * <p>권한 정책:
+ * <ul>
+ *   <li>경력 · 학력 · 교육이수: 본인 또는 ADMIN / HR_MANAGER 가 추가/삭제 가능</li>
+ *   <li>상벌: HR 가 부여하는 정보이므로 ADMIN / HR_MANAGER 만 가능 (본인 변경 불가)</li>
+ * </ul>
  */
 @Controller
-@PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")
 public class HrProfileController {
 
     private final HrService hrService;
 
     public HrProfileController(HrService hrService) { this.hrService = hrService; }
+
+    /** 본인 또는 HR/ADMIN 이면 통과. 아니면 403. */
+    private static void assertSelfOrHr(CustomUserDetails me, Long targetUserId) {
+        if (me.getUserId().equals(targetUserId)) return;
+        if ("ADMIN".equals(me.getRoleCd()) || "HR_MANAGER".equals(me.getRoleCd())) return;
+        throw new ApiException("FORBIDDEN", "본인 또는 인사 담당자만 가능합니다");
+    }
 
     /* ===== 경력 ===== */
     @PostMapping("/hr/career.do")
@@ -38,6 +51,7 @@ public class HrProfileController {
                             @RequestParam String startDt,
                             @RequestParam(required = false) String endDt,
                             @RequestParam(required = false) String description) {
+        assertSelfOrHr(me, userId);
         HrCareerVO vo = new HrCareerVO();
         vo.setUserId(userId);
         vo.setCompanyNm(companyNm);
@@ -51,7 +65,9 @@ public class HrProfileController {
     }
 
     @PostMapping("/hr/career/delete.do")
-    public String deleteCareer(@RequestParam Long careerId, @RequestParam Long userId) {
+    public String deleteCareer(@AuthenticationPrincipal CustomUserDetails me,
+                               @RequestParam Long careerId, @RequestParam Long userId) {
+        assertSelfOrHr(me, userId);
         hrService.deleteCareer(careerId);
         return "redirect:/user/profile.do?userId=" + userId;
     }
@@ -66,6 +82,7 @@ public class HrProfileController {
                                @RequestParam String eduStatusCd,
                                @RequestParam(required = false) String admissionDt,
                                @RequestParam(required = false) String graduationDt) {
+        assertSelfOrHr(me, userId);
         HrEducationVO vo = new HrEducationVO();
         vo.setUserId(userId);
         vo.setSchoolNm(schoolNm);
@@ -80,7 +97,9 @@ public class HrProfileController {
     }
 
     @PostMapping("/hr/education/delete.do")
-    public String deleteEducation(@RequestParam Long eduId, @RequestParam Long userId) {
+    public String deleteEducation(@AuthenticationPrincipal CustomUserDetails me,
+                                  @RequestParam Long eduId, @RequestParam Long userId) {
+        assertSelfOrHr(me, userId);
         hrService.deleteEducation(eduId);
         return "redirect:/user/profile.do?userId=" + userId;
     }
@@ -95,6 +114,7 @@ public class HrProfileController {
                               @RequestParam(required = false) String endDt,
                               @RequestParam(required = false) BigDecimal hours,
                               @RequestParam(required = false) String certNo) {
+        assertSelfOrHr(me, userId);
         HrTrainingVO vo = new HrTrainingVO();
         vo.setUserId(userId);
         vo.setCourseNm(courseNm);
@@ -109,13 +129,16 @@ public class HrProfileController {
     }
 
     @PostMapping("/hr/training/delete.do")
-    public String deleteTraining(@RequestParam Long trnId, @RequestParam Long userId) {
+    public String deleteTraining(@AuthenticationPrincipal CustomUserDetails me,
+                                 @RequestParam Long trnId, @RequestParam Long userId) {
+        assertSelfOrHr(me, userId);
         hrService.deleteTraining(trnId);
         return "redirect:/user/profile.do?userId=" + userId;
     }
 
-    /* ===== 상벌 ===== */
+    /* ===== 상벌 (HR 전용) ===== */
     @PostMapping("/hr/award.do")
+    @PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")
     public String addAward(@AuthenticationPrincipal CustomUserDetails me,
                            @RequestParam Long userId,
                            @RequestParam String awardTypeCd,
@@ -136,6 +159,7 @@ public class HrProfileController {
     }
 
     @PostMapping("/hr/award/delete.do")
+    @PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")
     public String deleteAward(@RequestParam Long awardId, @RequestParam Long userId) {
         hrService.deleteAward(awardId);
         return "redirect:/user/profile.do?userId=" + userId;

@@ -40,6 +40,8 @@ public interface UserMapper {
 
     int updateRole(@Param("userId") Long userId, @Param("roleCd") String roleCd);
 
+    int updateEmail(@Param("userId") Long userId, @Param("email") String email);
+
     List<UserVO> listByDept(@Param("deptId") Long deptId);
 
     List<UserVO> listAll();

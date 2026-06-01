@@ -5,10 +5,16 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2><i class="bi bi-person-vcard"></i> ${user.name} 프로필</h2>
     <div>
+        <c:if test="${isOwn}">
+            <a class="btn btn-primary btn-sm"
+               href="${pageContext.request.contextPath}/user/me.do">
+                <i class="bi bi-person-gear"></i> 내 정보 수정
+            </a>
+        </c:if>
         <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
             <a class="btn btn-outline-primary btn-sm"
                href="${pageContext.request.contextPath}/sys/user/edit.do?userId=${user.userId}">
-                <i class="bi bi-pencil"></i> 정보 수정
+                <i class="bi bi-pencil"></i> HR 정보 수정
             </a>
         </sec:authorize>
         <a class="btn btn-outline-secondary btn-sm" href="${pageContext.request.contextPath}/user/list.do">
@@ -288,7 +294,7 @@
         <div class="card">
             <div class="card-header"><i class="bi bi-award"></i> 상벌</div>
             <table class="table table-sm mb-0 align-middle">
-                <thead class="table-light"><tr><th>구분</th><th>일자</th><th>제목</th><th>수여기관</th><th>사유</th><c:if test="${canManage}"><th style="width:60px"></th></c:if></tr></thead>
+                <thead class="table-light"><tr><th>구분</th><th>일자</th><th>제목</th><th>수여기관</th><th>사유</th><c:if test="${canEditAward}"><th style="width:60px"></th></c:if></tr></thead>
                 <tbody>
                 <c:forEach var="a" items="${awards}">
                     <tr>
@@ -302,7 +308,7 @@
                         <td><strong>${a.title}</strong></td>
                         <td>${a.organization}</td>
                         <td class="small text-muted"><c:out value="${a.reason}"/></td>
-                        <c:if test="${canManage}">
+                        <c:if test="${canEditAward}">
                         <td>
                             <form method="post" action="${pageContext.request.contextPath}/hr/award/delete.do" onsubmit="return confirm('삭제할까요?');">
                                 <sec:csrfInput/>
@@ -315,11 +321,11 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty awards}">
-                    <tr><td colspan="${canManage ? 6 : 5}" class="text-center text-muted py-3">등록된 상벌이 없습니다.</td></tr>
+                    <tr><td colspan="${canEditAward ? 6 : 5}" class="text-center text-muted py-3">등록된 상벌이 없습니다.</td></tr>
                 </c:if>
                 </tbody>
             </table>
-            <c:if test="${canManage}">
+            <c:if test="${canEditAward}">
             <div class="card-body border-top pt-3">
                 <form method="post" action="${pageContext.request.contextPath}/hr/award.do" class="row g-2">
                     <sec:csrfInput/>

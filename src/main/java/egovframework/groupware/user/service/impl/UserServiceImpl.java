@@ -89,6 +89,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void changeEmail(Long userId, String newEmail) {
+        userMapper.updateEmail(userId, newEmail);
+    }
+
+    @Override
     public List<UserVO> listByDept(Long deptId) {
         return userMapper.listByDept(deptId);
     }

@@ -29,6 +29,9 @@ public interface UserService {
     /** 역할 코드 변경 (예: EMPLOYEE → MANAGER). */
     void setRole(Long userId, String roleCd);
 
+    /** 이메일(로그인 ID) 변경. 본인 정보 수정에서 사용. 중복 검사는 호출자 책임. */
+    void changeEmail(Long userId, String newEmail);
+
     List<UserVO> listByDept(Long deptId);
 
     List<UserVO> listAll();

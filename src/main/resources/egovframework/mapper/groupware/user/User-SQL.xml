@@ -164,6 +164,10 @@
         UPDATE gw_user SET role_cd = #{roleCd} WHERE user_id = #{userId}
     </update>
 
+    <update id="updateEmail">
+        UPDATE gw_user SET email = #{email}, updated_at = CURRENT_TIMESTAMP WHERE user_id = #{userId}
+    </update>
+
     <select id="listByDept" resultMap="userMap">
         SELECT <include refid="userColumns"/>
           FROM gw_user u

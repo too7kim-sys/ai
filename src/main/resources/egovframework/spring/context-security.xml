@@ -20,12 +20,14 @@
         <intercept-url pattern="/sys/user/create.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/sys/user/edit.do"   access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/sys/**" access="hasRole('ADMIN')"/>
-        <intercept-url pattern="/hr/career/**"    access="hasAnyRole('ADMIN','HR_MANAGER')"/>
-        <intercept-url pattern="/hr/career.do"    access="hasAnyRole('ADMIN','HR_MANAGER')"/>
-        <intercept-url pattern="/hr/education/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
-        <intercept-url pattern="/hr/education.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
-        <intercept-url pattern="/hr/training/**"  access="hasAnyRole('ADMIN','HR_MANAGER')"/>
-        <intercept-url pattern="/hr/training.do"  access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <!-- 경력 / 학력 / 교육이수 : 본인 또는 HR/ADMIN. 본인 검증은 컨트롤러에서. -->
+        <intercept-url pattern="/hr/career/**"    access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/career.do"    access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/education/**" access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/education.do" access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/training/**"  access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/training.do"  access="isAuthenticated()"/>
+        <!-- 상벌 : HR/ADMIN 만 가능 (직원 본인 변경 불가). -->
         <intercept-url pattern="/hr/award/**"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/hr/award.do"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/mail/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
