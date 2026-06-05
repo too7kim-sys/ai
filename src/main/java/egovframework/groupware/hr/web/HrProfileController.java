@@ -1,18 +1,26 @@
 package egovframework.groupware.hr.web;
 
+import egovframework.groupware.attach.service.AttachService;
+import egovframework.groupware.attach.service.AttachVO;
 import egovframework.groupware.auth.security.CustomUserDetails;
 import egovframework.groupware.cmm.ApiException;
+import egovframework.groupware.doc.web.DocController;
 import egovframework.groupware.hr.service.HrAwardVO;
 import egovframework.groupware.hr.service.HrCareerVO;
 import egovframework.groupware.hr.service.HrEducationVO;
+import egovframework.groupware.hr.service.HrProjectVO;
 import egovframework.groupware.hr.service.HrService;
 import egovframework.groupware.hr.service.HrTrainingVO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -32,8 +40,12 @@ import java.time.LocalDate;
 public class HrProfileController {
 
     private final HrService hrService;
+    private final AttachService attachService;
 
-    public HrProfileController(HrService hrService) { this.hrService = hrService; }
+    public HrProfileController(HrService hrService, AttachService attachService) {
+        this.hrService = hrService;
+        this.attachService = attachService;
+    }
 
     /** 본인 또는 HR/ADMIN 이면 통과. 아니면 403. */
     private static void assertSelfOrHr(CustomUserDetails me, Long targetUserId) {
@@ -163,5 +175,102 @@ public class HrProfileController {
     public String deleteAward(@RequestParam Long awardId, @RequestParam Long userId) {
         hrService.deleteAward(awardId);
         return "redirect:/user/profile.do?userId=" + userId;
+    }
+
+    /* ===== 프로젝트 수행 경력 (KOSA 표준 + 첨부) ===== */
+    @PostMapping("/hr/project.do")
+    public String addProject(@AuthenticationPrincipal CustomUserDetails me,
+                             @RequestParam Long userId,
+                             @RequestParam String projectNm,
+                             @RequestParam(required = false) String clientNm,
+                             @RequestParam(required = false) String contractorNm,
+                             @RequestParam(required = false) String roleNm,
+                             @RequestParam(required = false) String startDt,
+                             @RequestParam(required = false) String endDt,
+                             @RequestParam(required = false) String techStack,
+                             @RequestParam(required = false) String description,
+                             @RequestParam(required = false) String kosaGradeCd,
+                             @RequestParam(required = false) String kosaConfirmedYn,
+                             @RequestParam(value = "files", required = false) MultipartFile[] files) {
+        assertSelfOrHr(me, userId);
+        HrProjectVO vo = new HrProjectVO();
+        vo.setUserId(userId);
+        vo.setProjectNm(projectNm);
+        vo.setClientNm(clientNm);
+        vo.setContractorNm(contractorNm);
+        vo.setRoleNm(roleNm);
+        if (startDt != null && !startDt.isBlank()) vo.setStartDt(LocalDate.parse(startDt));
+        if (endDt != null && !endDt.isBlank()) vo.setEndDt(LocalDate.parse(endDt));
+        vo.setTechStack(techStack);
+        vo.setDescription(description);
+        vo.setKosaGradeCd(kosaGradeCd);
+        vo.setKosaConfirmedYn("Y".equals(kosaConfirmedYn) ? "Y" : "N");
+        vo.setCreatedBy(me.getUserId());
+        hrService.createProject(vo, files);
+        return "redirect:/user/profile.do?userId=" + userId;
+    }
+
+    @PostMapping("/hr/project/edit.do")
+    public String editProject(@AuthenticationPrincipal CustomUserDetails me,
+                              @RequestParam Long projectId,
+                              @RequestParam Long userId,
+                              @RequestParam String projectNm,
+                              @RequestParam(required = false) String clientNm,
+                              @RequestParam(required = false) String contractorNm,
+                              @RequestParam(required = false) String roleNm,
+                              @RequestParam(required = false) String startDt,
+                              @RequestParam(required = false) String endDt,
+                              @RequestParam(required = false) String techStack,
+                              @RequestParam(required = false) String description,
+                              @RequestParam(required = false) String kosaGradeCd,
+                              @RequestParam(required = false) String kosaConfirmedYn,
+                              @RequestParam(value = "files", required = false) MultipartFile[] files) {
+        assertSelfOrHr(me, userId);
+        HrProjectVO vo = new HrProjectVO();
+        vo.setProjectId(projectId);
+        vo.setUserId(userId);
+        vo.setProjectNm(projectNm);
+        vo.setClientNm(clientNm);
+        vo.setContractorNm(contractorNm);
+        vo.setRoleNm(roleNm);
+        if (startDt != null && !startDt.isBlank()) vo.setStartDt(LocalDate.parse(startDt));
+        if (endDt != null && !endDt.isBlank()) vo.setEndDt(LocalDate.parse(endDt));
+        vo.setTechStack(techStack);
+        vo.setDescription(description);
+        vo.setKosaGradeCd(kosaGradeCd);
+        vo.setKosaConfirmedYn("Y".equals(kosaConfirmedYn) ? "Y" : "N");
+        vo.setCreatedBy(me.getUserId());
+        hrService.updateProject(vo, files);
+        return "redirect:/user/profile.do?userId=" + userId;
+    }
+
+    @PostMapping("/hr/project/delete.do")
+    public String deleteProject(@AuthenticationPrincipal CustomUserDetails me,
+                                @RequestParam Long projectId, @RequestParam Long userId) {
+        assertSelfOrHr(me, userId);
+        hrService.deleteProject(projectId);
+        return "redirect:/user/profile.do?userId=" + userId;
+    }
+
+    /**
+     * 프로젝트 첨부 (코사증빙 등) 다운로드.
+     * <p>본인 또는 HR/ADMIN 만 다운로드 가능. owner_entity 가 HR_PROJECT 가 아닌
+     * 첨부 ID 로 다른 모듈 파일을 가져오는 IDOR 도 차단한다.
+     */
+    @GetMapping("/hr/project/attach/download.do")
+    public void downloadProjectAttach(@AuthenticationPrincipal CustomUserDetails me,
+                                      @RequestParam Long attachId,
+                                      HttpServletResponse resp) throws IOException {
+        AttachVO vo = attachService.findById(attachId);
+        if (vo == null) { resp.sendError(404); return; }
+        if (!"HR_PROJECT".equals(attachService.findOwnerEntity(attachId))) {
+            resp.sendError(403); return;
+        }
+        HrProjectVO p = hrService.findProjectByAttachGroup(vo.getGroupId());
+        boolean isHr = "ADMIN".equals(me.getRoleCd()) || "HR_MANAGER".equals(me.getRoleCd());
+        if (p == null || (!isHr && !p.getUserId().equals(me.getUserId()))) {
+            resp.sendError(403); return;
+        }
+        DocController.streamAttachment(resp, vo, attachService.resolvePath(vo));
     }
 }

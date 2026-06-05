@@ -9,6 +9,7 @@ import egovframework.groupware.hr.service.HrAwardVO;
 import egovframework.groupware.hr.service.HrCareerVO;
 import egovframework.groupware.hr.service.HrEducationVO;
 import egovframework.groupware.hr.service.HrHistoryVO;
+import egovframework.groupware.hr.service.HrProjectVO;
 import egovframework.groupware.hr.service.HrRecordVO;
 import egovframework.groupware.hr.service.HrService;
 import egovframework.groupware.hr.service.HrTrainingVO;
@@ -29,10 +30,13 @@ public class HrServiceImpl implements HrService {
 
     private final HrMapper hrMapper;
     private final UserMapper userMapper;
+    private final egovframework.groupware.attach.service.AttachService attachService;
 
-    public HrServiceImpl(HrMapper hrMapper, UserMapper userMapper) {
+    public HrServiceImpl(HrMapper hrMapper, UserMapper userMapper,
+                         egovframework.groupware.attach.service.AttachService attachService) {
         this.hrMapper = hrMapper;
         this.userMapper = userMapper;
+        this.attachService = attachService;
     }
 
     @Override
@@ -245,6 +249,86 @@ public class HrServiceImpl implements HrService {
     public void deleteAward(Long awardId) { hrMapper.deleteAward(awardId); }
     @Override
     public List<HrAwardVO> findAwardByUser(Long userId) { return hrMapper.listAwardByUser(userId); }
+
+    /* ===== 프로젝트 수행 경력 ===== */
+    @Override
+    @Transactional
+    public Long createProject(HrProjectVO vo,
+                              org.springframework.web.multipart.MultipartFile[] files) {
+        // 첨부가 1개 이상 있으면 attach group 을 미리 만들어 ID 를 연결.
+        if (hasFiles(files)) {
+            Long groupId = attachService.createGroup("HR_PROJECT", null);
+            vo.setAttachGroupId(groupId);
+            storeFiles(groupId, files, vo.getCreatedBy());
+        }
+        hrMapper.insertProject(vo);
+        return vo.getProjectId();
+    }
+
+    @Override
+    @Transactional
+    public void updateProject(HrProjectVO vo,
+                              org.springframework.web.multipart.MultipartFile[] files) {
+        HrProjectVO existing = hrMapper.findProject(vo.getProjectId());
+        if (existing == null) throw new ApiException("NOT_FOUND", "프로젝트가 존재하지 않습니다");
+        if (hasFiles(files)) {
+            Long groupId = existing.getAttachGroupId();
+            if (groupId == null) {
+                groupId = attachService.createGroup("HR_PROJECT", String.valueOf(vo.getProjectId()));
+                vo.setAttachGroupId(groupId);
+            }
+            storeFiles(groupId, files, vo.getCreatedBy());
+        }
+        hrMapper.updateProject(vo);
+    }
+
+    @Override @Transactional
+    public void deleteProject(Long projectId) { hrMapper.deleteProject(projectId); }
+
+    @Override
+    public HrProjectVO findProject(Long projectId) {
+        HrProjectVO p = hrMapper.findProject(projectId);
+        if (p != null && p.getAttachGroupId() != null) {
+            p.setAttachments(attachService.findByGroup(p.getAttachGroupId()));
+        }
+        return p;
+    }
+
+    @Override
+    public List<HrProjectVO> findProjectByUser(Long userId) {
+        List<HrProjectVO> list = hrMapper.listProjectByUser(userId);
+        for (HrProjectVO p : list) {
+            if (p.getAttachGroupId() != null) {
+                p.setAttachments(attachService.findByGroup(p.getAttachGroupId()));
+            }
+        }
+        return list;
+    }
+
+    @Override
+    public HrProjectVO findProjectByAttachGroup(Long groupId) {
+        return hrMapper.findProjectByAttachGroup(groupId);
+    }
+
+    private static boolean hasFiles(org.springframework.web.multipart.MultipartFile[] files) {
+        if (files == null) return false;
+        for (org.springframework.web.multipart.MultipartFile f : files) {
+            if (f != null && !f.isEmpty()) return true;
+        }
+        return false;
+    }
+
+    private void storeFiles(Long groupId,
+                            org.springframework.web.multipart.MultipartFile[] files,
+                            Long userId) {
+        for (org.springframework.web.multipart.MultipartFile f : files) {
+            if (f == null || f.isEmpty()) continue;
+            try { attachService.store(groupId, f, userId); }
+            catch (java.io.IOException ex) {
+                throw new ApiException("UPLOAD_FAIL", "첨부 업로드 실패: " + ex.getMessage());
+            }
+        }
+    }
 
     private String nullSafe(String s) { return s == null ? "" : s; }
 }

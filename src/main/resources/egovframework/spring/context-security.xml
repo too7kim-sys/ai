@@ -27,6 +27,8 @@
         <intercept-url pattern="/hr/education.do" access="isAuthenticated()"/>
         <intercept-url pattern="/hr/training/**"  access="isAuthenticated()"/>
         <intercept-url pattern="/hr/training.do"  access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/project/**"   access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/project.do"   access="isAuthenticated()"/>
         <!-- 상벌 : HR/ADMIN 만 가능 (직원 본인 변경 불가). -->
         <intercept-url pattern="/hr/award/**"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/hr/award.do"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>

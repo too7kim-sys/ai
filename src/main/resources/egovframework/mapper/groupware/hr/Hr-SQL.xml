@@ -314,4 +314,77 @@
          WHERE a.user_id = #{userId}
          ORDER BY a.occurred_on DESC
     </select>
+
+    <!-- ─────────────── 프로젝트 수행 경력 ─────────────── -->
+    <resultMap id="projectMap" type="egovframework.groupware.hr.service.HrProjectVO">
+        <id property="projectId" column="project_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="projectNm" column="project_nm"/>
+        <result property="clientNm" column="client_nm"/>
+        <result property="contractorNm" column="contractor_nm"/>
+        <result property="roleNm" column="role_nm"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="techStack" column="tech_stack"/>
+        <result property="description" column="description"/>
+        <result property="kosaGradeCd" column="kosa_grade_cd"/>
+        <result property="kosaGradeNm" column="kosa_grade_nm"/>
+        <result property="kosaConfirmedYn" column="kosa_confirmed_yn"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insertProject" parameterType="egovframework.groupware.hr.service.HrProjectVO"
+            useGeneratedKeys="true" keyProperty="projectId" keyColumn="project_id">
+        INSERT INTO gw_hr_project
+            (user_id, project_nm, client_nm, contractor_nm, role_nm,
+             start_dt, end_dt, tech_stack, description,
+             kosa_grade_cd, kosa_confirmed_yn, attach_group_id, created_by)
+        VALUES
+            (#{userId}, #{projectNm}, #{clientNm}, #{contractorNm}, #{roleNm},
+             #{startDt}, #{endDt}, #{techStack}, #{description},
+             #{kosaGradeCd}, COALESCE(#{kosaConfirmedYn},'N'), #{attachGroupId}, #{createdBy})
+    </insert>
+
+    <update id="updateProject" parameterType="egovframework.groupware.hr.service.HrProjectVO">
+        UPDATE gw_hr_project
+           SET project_nm    = #{projectNm},
+               client_nm     = #{clientNm},
+               contractor_nm = #{contractorNm},
+               role_nm       = #{roleNm},
+               start_dt      = #{startDt},
+               end_dt        = #{endDt},
+               tech_stack    = #{techStack},
+               description   = #{description},
+               kosa_grade_cd = #{kosaGradeCd},
+               kosa_confirmed_yn = COALESCE(#{kosaConfirmedYn}, kosa_confirmed_yn),
+               attach_group_id = COALESCE(#{attachGroupId}, attach_group_id),
+               updated_at    = CURRENT_TIMESTAMP
+         WHERE project_id = #{projectId}
+    </update>
+
+    <delete id="deleteProject">DELETE FROM gw_hr_project WHERE project_id = #{projectId}</delete>
+
+    <select id="findProject" resultMap="projectMap">
+        SELECT p.*, c.code_nm AS kosa_grade_nm
+          FROM gw_hr_project p
+          LEFT JOIN gw_code c ON c.group_cd = 'KOSA_GRADE' AND c.code_val = p.kosa_grade_cd
+         WHERE p.project_id = #{projectId}
+    </select>
+
+    <select id="listProjectByUser" resultMap="projectMap">
+        SELECT p.*, c.code_nm AS kosa_grade_nm
+          FROM gw_hr_project p
+          LEFT JOIN gw_code c ON c.group_cd = 'KOSA_GRADE' AND c.code_val = p.kosa_grade_cd
+         WHERE p.user_id = #{userId}
+         ORDER BY p.end_dt DESC NULLS LAST, p.start_dt DESC NULLS LAST
+    </select>
+
+    <select id="findProjectByAttachGroup" resultMap="projectMap">
+        SELECT p.*, c.code_nm AS kosa_grade_nm
+          FROM gw_hr_project p
+          LEFT JOIN gw_code c ON c.group_cd = 'KOSA_GRADE' AND c.code_val = p.kosa_grade_cd
+         WHERE p.attach_group_id = #{groupId}
+         LIMIT 1
+    </select>
 </mapper>

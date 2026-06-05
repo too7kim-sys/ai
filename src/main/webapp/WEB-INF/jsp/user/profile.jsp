@@ -290,6 +290,105 @@
             </c:if>
         </div>
 
+        <%-- ─────────── 프로젝트 수행 경력 (KOSA 표준 + 코사증빙 첨부) ─────────── --%>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-diagram-3"></i> 프로젝트 수행 경력 <small class="text-muted">(KOSA 표준)</small></span>
+                <c:if test="${canManage}">
+                    <small class="text-muted">KOSA 신고 완료 시 ✓ 체크 → 경력 증명서 첨부 권장</small>
+                </c:if>
+            </div>
+            <ul class="list-group list-group-flush">
+                <c:forEach var="p" items="${projects}">
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between flex-wrap">
+                            <div class="me-2">
+                                <strong>${p.projectNm}</strong>
+                                <c:if test="${p.kosaConfirmedYn eq 'Y'}">
+                                    <span class="badge bg-success ms-1"><i class="bi bi-check2-circle"></i> KOSA 신고완료</span>
+                                </c:if>
+                                <c:if test="${not empty p.kosaGradeNm}">
+                                    <span class="badge bg-info ms-1">${p.kosaGradeNm}</span>
+                                </c:if>
+                                <div class="small text-muted">
+                                    ${p.startDt} ~ <c:choose><c:when test="${empty p.endDt}">진행중</c:when><c:otherwise>${p.endDt}</c:otherwise></c:choose>
+                                    <c:if test="${not empty p.clientNm}"> · 발주처 <strong>${p.clientNm}</strong></c:if>
+                                    <c:if test="${not empty p.contractorNm}"> · 수행사 ${p.contractorNm}</c:if>
+                                    <c:if test="${not empty p.roleNm}"> · 역할 <strong>${p.roleNm}</strong></c:if>
+                                </div>
+                                <c:if test="${not empty p.techStack}">
+                                    <div class="small mt-1"><i class="bi bi-cpu text-muted"></i> ${p.techStack}</div>
+                                </c:if>
+                                <c:if test="${not empty p.description}">
+                                    <div class="small text-muted mt-1" style="white-space:pre-wrap"><c:out value="${p.description}"/></div>
+                                </c:if>
+                                <c:if test="${not empty p.attachments}">
+                                    <div class="mt-2 small">
+                                        <i class="bi bi-paperclip text-muted"></i>
+                                        <c:forEach var="a" items="${p.attachments}" varStatus="st">
+                                            <a class="me-2 text-decoration-none"
+                                               href="${pageContext.request.contextPath}/hr/project/attach/download.do?attachId=${a.attachId}">
+                                                ${a.fileNm}
+                                            </a>
+                                        </c:forEach>
+                                    </div>
+                                </c:if>
+                            </div>
+                            <c:if test="${canManage}">
+                                <form method="post" action="${pageContext.request.contextPath}/hr/project/delete.do"
+                                      onsubmit="return confirm('삭제할까요?');">
+                                    <sec:csrfInput/>
+                                    <input type="hidden" name="projectId" value="${p.projectId}"/>
+                                    <input type="hidden" name="userId" value="${user.userId}"/>
+                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+                                </form>
+                            </c:if>
+                        </div>
+                    </li>
+                </c:forEach>
+                <c:if test="${empty projects}">
+                    <li class="list-group-item empty-state">
+                        <i class="bi bi-diagram-3 empty-state-icon"></i>
+                        <div class="empty-state-title">등록된 프로젝트 수행 경력이 없습니다</div>
+                        <c:if test="${canManage}">
+                            <div class="empty-state-desc small text-muted">아래 폼에서 추가하세요.</div>
+                        </c:if>
+                    </li>
+                </c:if>
+            </ul>
+            <c:if test="${canManage}">
+            <div class="card-body border-top pt-3">
+                <form method="post" enctype="multipart/form-data"
+                      action="${pageContext.request.contextPath}/hr/project.do" class="row g-2">
+                    <sec:csrfInput/>
+                    <input type="hidden" name="userId" value="${user.userId}"/>
+                    <div class="col-md-4"><input type="text" name="projectNm" class="form-control form-control-sm" placeholder="프로젝트명 *" required/></div>
+                    <div class="col-md-3"><input type="text" name="clientNm" class="form-control form-control-sm" placeholder="발주처"/></div>
+                    <div class="col-md-3"><input type="text" name="contractorNm" class="form-control form-control-sm" placeholder="수행사"/></div>
+                    <div class="col-md-2"><input type="text" name="roleNm" class="form-control form-control-sm" placeholder="역할 (PL/PM/개발자)"/></div>
+                    <div class="col-md-2"><input type="date" name="startDt" class="form-control form-control-sm" title="시작일"/></div>
+                    <div class="col-md-2"><input type="date" name="endDt" class="form-control form-control-sm" title="종료일(공란=진행중)"/></div>
+                    <div class="col-md-2">
+                        <select name="kosaGradeCd" class="form-select form-select-sm">
+                            <option value="">- KOSA 등급 -</option>
+                            <c:forEach var="g" items="${kosaGradeCodes}"><option value="${g.codeVal}">${g.codeNm}</option></c:forEach>
+                        </select>
+                    </div>
+                    <div class="col-md-3 form-check form-switch align-self-center ms-2">
+                        <input class="form-check-input" type="checkbox" id="kosaConfirmedChk" name="kosaConfirmedYn" value="Y"/>
+                        <label class="form-check-label small" for="kosaConfirmedChk">KOSA 신고 완료</label>
+                    </div>
+                    <div class="col-md-3"><input type="file" name="files" multiple class="form-control form-control-sm" title="코사증빙 등 첨부"/></div>
+                    <div class="col-md-12"><input type="text" name="techStack" class="form-control form-control-sm" placeholder="사용 기술 (예: Java, Spring, MySQL, AWS)"/></div>
+                    <div class="col-md-12"><textarea name="description" class="form-control form-control-sm" rows="2" placeholder="담당 업무 상세"></textarea></div>
+                    <div class="col-12 text-end">
+                        <button class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> 프로젝트 추가</button>
+                    </div>
+                </form>
+            </div>
+            </c:if>
+        </div>
+
         <%-- ─────────── 상벌 ─────────── --%>
         <div class="card">
             <div class="card-header"><i class="bi bi-award"></i> 상벌</div>

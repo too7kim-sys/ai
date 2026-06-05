@@ -80,10 +80,12 @@ public class UserDirectoryController {
             model.addAttribute("educations", hrService.findEducationByUser(userId));
             model.addAttribute("trainings", hrService.findTrainingByUser(userId));
             model.addAttribute("awards", hrService.findAwardByUser(userId));
+            model.addAttribute("projects", hrService.findProjectByUser(userId));
         }
         if (canManage) {
             model.addAttribute("degreeCodes",  codeService.findCodes("HR_DEGREE"));
             model.addAttribute("eduStatusCodes", codeService.findCodes("HR_EDU_STATUS"));
+            model.addAttribute("kosaGradeCodes", codeService.findCodes("KOSA_GRADE"));
         }
         if (canEditAward) {
             model.addAttribute("awardTypeCodes", codeService.findCodes("HR_AWARD_TYPE"));

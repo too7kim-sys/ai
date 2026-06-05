@@ -6,6 +6,7 @@ import egovframework.groupware.hr.service.HrAwardVO;
 import egovframework.groupware.hr.service.HrCareerVO;
 import egovframework.groupware.hr.service.HrEducationVO;
 import egovframework.groupware.hr.service.HrHistoryVO;
+import egovframework.groupware.hr.service.HrProjectVO;
 import egovframework.groupware.hr.service.HrRecordVO;
 import egovframework.groupware.hr.service.HrTrainingVO;
 import egovframework.groupware.hr.service.PositionVO;
@@ -61,4 +62,13 @@ public interface HrMapper {
     int insertAward(HrAwardVO vo);
     int deleteAward(@Param("awardId") Long awardId);
     List<HrAwardVO> listAwardByUser(@Param("userId") Long userId);
+
+    /* 프로젝트 수행 경력 */
+    int insertProject(HrProjectVO vo);
+    int updateProject(HrProjectVO vo);
+    int deleteProject(@Param("projectId") Long projectId);
+    HrProjectVO findProject(@Param("projectId") Long projectId);
+    List<HrProjectVO> listProjectByUser(@Param("userId") Long userId);
+    /** 첨부 다운로드 권한 검증용 — attach group 소유자 사용자 id 조회. */
+    HrProjectVO findProjectByAttachGroup(@Param("groupId") Long groupId);
 }
