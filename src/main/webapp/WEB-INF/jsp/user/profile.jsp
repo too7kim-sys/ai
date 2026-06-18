@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c"   uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn"  uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <title>${user.name} 프로필</title>
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -293,42 +294,68 @@
         <%-- ─────────── 프로젝트 수행 경력 (KOSA 표준 + 코사증빙 첨부) ─────────── --%>
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-diagram-3"></i> 프로젝트 수행 경력 <small class="text-muted">(KOSA 표준)</small></span>
-                <c:if test="${canManage}">
-                    <small class="text-muted">KOSA 신고 완료 시 ✓ 체크 → 경력 증명서 첨부 권장</small>
-                </c:if>
+                <span><i class="bi bi-diagram-3"></i> 프로젝트 수행 경력
+                    <small class="text-muted ms-1">KOSA 표준</small></span>
+                <span class="small text-muted">총 ${empty projects ? 0 : projects.size()}건</span>
             </div>
             <ul class="list-group list-group-flush">
                 <c:forEach var="p" items="${projects}">
                     <li class="list-group-item">
-                        <div class="d-flex justify-content-between flex-wrap">
-                            <div class="me-2">
-                                <strong>${p.projectNm}</strong>
-                                <c:if test="${p.kosaConfirmedYn eq 'Y'}">
-                                    <span class="badge bg-success ms-1"><i class="bi bi-check2-circle"></i> KOSA 신고완료</span>
-                                </c:if>
-                                <c:if test="${not empty p.kosaGradeNm}">
-                                    <span class="badge bg-info ms-1">${p.kosaGradeNm}</span>
-                                </c:if>
-                                <div class="small text-muted">
-                                    ${p.startDt} ~ <c:choose><c:when test="${empty p.endDt}">진행중</c:when><c:otherwise>${p.endDt}</c:otherwise></c:choose>
-                                    <c:if test="${not empty p.clientNm}"> · 발주처 <strong>${p.clientNm}</strong></c:if>
-                                    <c:if test="${not empty p.contractorNm}"> · 수행사 ${p.contractorNm}</c:if>
-                                    <c:if test="${not empty p.roleNm}"> · 역할 <strong>${p.roleNm}</strong></c:if>
+                        <div class="d-flex justify-content-between gap-2">
+                            <div class="flex-grow-1">
+                                <%-- 1줄: 제목 + KOSA 뱃지 --%>
+                                <div class="d-flex align-items-center flex-wrap gap-1">
+                                    <strong class="me-1">${p.projectNm}</strong>
+                                    <c:if test="${not empty p.kosaGradeNm}">
+                                        <span class="badge bg-info">${p.kosaGradeNm}</span>
+                                    </c:if>
+                                    <c:if test="${p.kosaConfirmedYn eq 'Y'}">
+                                        <span class="badge bg-success"><i class="bi bi-check2-circle"></i> KOSA 신고완료</span>
+                                    </c:if>
+                                    <c:if test="${empty p.endDt}">
+                                        <span class="badge bg-primary">진행중</span>
+                                    </c:if>
                                 </div>
+                                <%-- 2줄: 기간 · 발주처/수행사/역할 --%>
+                                <div class="small text-muted mt-1">
+                                    <i class="bi bi-calendar-range"></i>
+                                    ${p.startDt} ~ <c:choose><c:when test="${empty p.endDt}">현재</c:when><c:otherwise>${p.endDt}</c:otherwise></c:choose>
+                                    <c:if test="${not empty p.clientNm}">
+                                        <span class="mx-1">·</span><i class="bi bi-building"></i>
+                                        발주처 <span class="text-dark">${p.clientNm}</span>
+                                    </c:if>
+                                    <c:if test="${not empty p.contractorNm}">
+                                        <span class="mx-1">·</span>수행사 ${p.contractorNm}
+                                    </c:if>
+                                    <c:if test="${not empty p.roleNm}">
+                                        <span class="mx-1">·</span><i class="bi bi-person-badge"></i>
+                                        <span class="text-dark">${p.roleNm}</span>
+                                    </c:if>
+                                </div>
+                                <%-- 3줄: 기술 스택을 칩으로 --%>
                                 <c:if test="${not empty p.techStack}">
-                                    <div class="small mt-1"><i class="bi bi-cpu text-muted"></i> ${p.techStack}</div>
+                                    <div class="mt-2 d-flex flex-wrap gap-1">
+                                        <c:forEach var="tech" items="${fn:split(p.techStack, ',')}">
+                                            <c:set var="techTrim" value="${fn:trim(tech)}"/>
+                                            <c:if test="${not empty techTrim}">
+                                                <span class="badge bg-light text-dark border">${techTrim}</span>
+                                            </c:if>
+                                        </c:forEach>
+                                    </div>
                                 </c:if>
+                                <%-- 4줄: 담당 업무 상세 --%>
                                 <c:if test="${not empty p.description}">
-                                    <div class="small text-muted mt-1" style="white-space:pre-wrap"><c:out value="${p.description}"/></div>
+                                    <div class="small text-muted mt-2" style="white-space:pre-wrap"><c:out value="${p.description}"/></div>
                                 </c:if>
+                                <%-- 5줄: 첨부 (코사증빙 등) --%>
                                 <c:if test="${not empty p.attachments}">
-                                    <div class="mt-2 small">
-                                        <i class="bi bi-paperclip text-muted"></i>
-                                        <c:forEach var="a" items="${p.attachments}" varStatus="st">
-                                            <a class="me-2 text-decoration-none"
-                                               href="${pageContext.request.contextPath}/hr/project/attach/download.do?attachId=${a.attachId}">
-                                                ${a.fileNm}
+                                    <div class="mt-2 d-flex flex-wrap gap-2">
+                                        <c:forEach var="a" items="${p.attachments}">
+                                            <a class="badge bg-light text-dark border text-decoration-none"
+                                               href="${pageContext.request.contextPath}/hr/project/attach/download.do?attachId=${a.attachId}"
+                                               title="다운로드">
+                                                <i class="bi bi-paperclip"></i>
+                                                <c:out value="${a.fileNm}"/>
                                             </a>
                                         </c:forEach>
                                     </div>
@@ -336,11 +363,11 @@
                             </div>
                             <c:if test="${canManage}">
                                 <form method="post" action="${pageContext.request.contextPath}/hr/project/delete.do"
-                                      onsubmit="return confirm('삭제할까요?');">
+                                      onsubmit="return confirm('이 프로젝트를 삭제할까요? 첨부 파일은 유지됩니다.');">
                                     <sec:csrfInput/>
                                     <input type="hidden" name="projectId" value="${p.projectId}"/>
                                     <input type="hidden" name="userId" value="${user.userId}"/>
-                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" title="삭제"><i class="bi bi-x"></i></button>
                                 </form>
                             </c:if>
                         </div>
@@ -351,7 +378,7 @@
                         <i class="bi bi-diagram-3 empty-state-icon"></i>
                         <div class="empty-state-title">등록된 프로젝트 수행 경력이 없습니다</div>
                         <c:if test="${canManage}">
-                            <div class="empty-state-desc small text-muted">아래 폼에서 추가하세요.</div>
+                            <div class="empty-state-desc small text-muted">아래 폼에서 추가하고 KOSA 경력증명서 등 증빙 파일을 함께 업로드하세요.</div>
                         </c:if>
                     </li>
                 </c:if>
@@ -359,30 +386,72 @@
             <c:if test="${canManage}">
             <div class="card-body border-top pt-3">
                 <form method="post" enctype="multipart/form-data"
-                      action="${pageContext.request.contextPath}/hr/project.do" class="row g-2">
+                      action="${pageContext.request.contextPath}/hr/project.do" class="row g-3">
                     <sec:csrfInput/>
                     <input type="hidden" name="userId" value="${user.userId}"/>
-                    <div class="col-md-4"><input type="text" name="projectNm" class="form-control form-control-sm" placeholder="프로젝트명 *" required/></div>
-                    <div class="col-md-3"><input type="text" name="clientNm" class="form-control form-control-sm" placeholder="발주처"/></div>
-                    <div class="col-md-3"><input type="text" name="contractorNm" class="form-control form-control-sm" placeholder="수행사"/></div>
-                    <div class="col-md-2"><input type="text" name="roleNm" class="form-control form-control-sm" placeholder="역할 (PL/PM/개발자)"/></div>
-                    <div class="col-md-2"><input type="date" name="startDt" class="form-control form-control-sm" title="시작일"/></div>
-                    <div class="col-md-2"><input type="date" name="endDt" class="form-control form-control-sm" title="종료일(공란=진행중)"/></div>
+
+                    <%-- 기본 정보 --%>
+                    <div class="col-md-5">
+                        <label class="form-label small">프로젝트명 <span class="text-danger">*</span></label>
+                        <input type="text" name="projectNm" class="form-control form-control-sm"
+                               placeholder="예: 차세대 그룹웨어 구축" required/>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">발주처</label>
+                        <input type="text" name="clientNm" class="form-control form-control-sm" placeholder="고객사"/>
+                    </div>
                     <div class="col-md-2">
+                        <label class="form-label small">수행사</label>
+                        <input type="text" name="contractorNm" class="form-control form-control-sm" placeholder="소속/외주"/>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">역할</label>
+                        <input type="text" name="roleNm" class="form-control form-control-sm" placeholder="PL/PM/개발"/>
+                    </div>
+
+                    <%-- 기간 + KOSA --%>
+                    <div class="col-md-2">
+                        <label class="form-label small">시작일</label>
+                        <input type="date" name="startDt" class="form-control form-control-sm"/>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">종료일 <span class="text-muted">(공란=진행중)</span></label>
+                        <input type="date" name="endDt" class="form-control form-control-sm"/>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">KOSA 등급</label>
                         <select name="kosaGradeCd" class="form-select form-select-sm">
-                            <option value="">- KOSA 등급 -</option>
+                            <option value="">- 미지정 -</option>
                             <c:forEach var="g" items="${kosaGradeCodes}"><option value="${g.codeVal}">${g.codeNm}</option></c:forEach>
                         </select>
                     </div>
-                    <div class="col-md-3 form-check form-switch align-self-center ms-2">
-                        <input class="form-check-input" type="checkbox" id="kosaConfirmedChk" name="kosaConfirmedYn" value="Y"/>
-                        <label class="form-check-label small" for="kosaConfirmedChk">KOSA 신고 완료</label>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="kosaConfirmedChk" name="kosaConfirmedYn" value="Y"/>
+                            <label class="form-check-label small" for="kosaConfirmedChk">KOSA 신고완료</label>
+                        </div>
                     </div>
-                    <div class="col-md-3"><input type="file" name="files" multiple class="form-control form-control-sm" title="코사증빙 등 첨부"/></div>
-                    <div class="col-md-12"><input type="text" name="techStack" class="form-control form-control-sm" placeholder="사용 기술 (예: Java, Spring, MySQL, AWS)"/></div>
-                    <div class="col-md-12"><textarea name="description" class="form-control form-control-sm" rows="2" placeholder="담당 업무 상세"></textarea></div>
+                    <div class="col-md-3">
+                        <label class="form-label small">코사증빙 첨부 <small class="text-muted">(여러 개 선택 가능)</small></label>
+                        <input type="file" name="files" multiple class="form-control form-control-sm"/>
+                    </div>
+
+                    <%-- 상세 --%>
+                    <div class="col-md-12">
+                        <label class="form-label small">사용 기술 <span class="text-muted">(콤마 구분)</span></label>
+                        <input type="text" name="techStack" class="form-control form-control-sm"
+                               placeholder="예: Java, Spring Boot, Oracle, AWS, Docker"/>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small">담당 업무</label>
+                        <textarea name="description" class="form-control form-control-sm" rows="2"
+                                  placeholder="요건 분석, 모듈 설계, 핵심 알고리즘 구현 등"></textarea>
+                    </div>
+
                     <div class="col-12 text-end">
-                        <button class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> 프로젝트 추가</button>
+                        <button class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-lg"></i> 프로젝트 추가
+                        </button>
                     </div>
                 </form>
             </div>

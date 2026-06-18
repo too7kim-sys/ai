@@ -56,10 +56,15 @@ public interface HrService {
 
     /* 프로젝트 수행 경력 (KOSA 표준 + 첨부) */
     Long createProject(HrProjectVO vo, org.springframework.web.multipart.MultipartFile[] files);
+
     void updateProject(HrProjectVO vo, org.springframework.web.multipart.MultipartFile[] files);
+
     void deleteProject(Long projectId);
+
     HrProjectVO findProject(Long projectId);
+
     List<HrProjectVO> findProjectByUser(Long userId);
+
     /** 첨부 다운로드 권한 검증용 — attach group → 소유 프로젝트. */
     HrProjectVO findProjectByAttachGroup(Long groupId);
 }

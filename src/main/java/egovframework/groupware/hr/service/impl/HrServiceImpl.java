@@ -1,5 +1,6 @@
 package egovframework.groupware.hr.service.impl;
 
+import egovframework.groupware.attach.service.AttachService;
 import egovframework.groupware.cmm.ApiException;
 import egovframework.groupware.hr.mapper.HrMapper;
 import egovframework.groupware.hr.service.DeptFlatVO;
@@ -18,7 +19,9 @@ import egovframework.groupware.user.mapper.UserMapper;
 import egovframework.groupware.user.service.UserVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,10 +33,9 @@ public class HrServiceImpl implements HrService {
 
     private final HrMapper hrMapper;
     private final UserMapper userMapper;
-    private final egovframework.groupware.attach.service.AttachService attachService;
+    private final AttachService attachService;
 
-    public HrServiceImpl(HrMapper hrMapper, UserMapper userMapper,
-                         egovframework.groupware.attach.service.AttachService attachService) {
+    public HrServiceImpl(HrMapper hrMapper, UserMapper userMapper, AttachService attachService) {
         this.hrMapper = hrMapper;
         this.userMapper = userMapper;
         this.attachService = attachService;
@@ -253,8 +255,7 @@ public class HrServiceImpl implements HrService {
     /* ===== 프로젝트 수행 경력 ===== */
     @Override
     @Transactional
-    public Long createProject(HrProjectVO vo,
-                              org.springframework.web.multipart.MultipartFile[] files) {
+    public Long createProject(HrProjectVO vo, MultipartFile[] files) {
         // 첨부가 1개 이상 있으면 attach group 을 미리 만들어 ID 를 연결.
         if (hasFiles(files)) {
             Long groupId = attachService.createGroup("HR_PROJECT", null);
@@ -267,8 +268,7 @@ public class HrServiceImpl implements HrService {
 
     @Override
     @Transactional
-    public void updateProject(HrProjectVO vo,
-                              org.springframework.web.multipart.MultipartFile[] files) {
+    public void updateProject(HrProjectVO vo, MultipartFile[] files) {
         HrProjectVO existing = hrMapper.findProject(vo.getProjectId());
         if (existing == null) throw new ApiException("NOT_FOUND", "프로젝트가 존재하지 않습니다");
         if (hasFiles(files)) {
@@ -310,21 +310,20 @@ public class HrServiceImpl implements HrService {
         return hrMapper.findProjectByAttachGroup(groupId);
     }
 
-    private static boolean hasFiles(org.springframework.web.multipart.MultipartFile[] files) {
+    private static boolean hasFiles(MultipartFile[] files) {
         if (files == null) return false;
-        for (org.springframework.web.multipart.MultipartFile f : files) {
+        for (MultipartFile f : files) {
             if (f != null && !f.isEmpty()) return true;
         }
         return false;
     }
 
-    private void storeFiles(Long groupId,
-                            org.springframework.web.multipart.MultipartFile[] files,
-                            Long userId) {
-        for (org.springframework.web.multipart.MultipartFile f : files) {
+    private void storeFiles(Long groupId, MultipartFile[] files, Long userId) {
+        for (MultipartFile f : files) {
             if (f == null || f.isEmpty()) continue;
-            try { attachService.store(groupId, f, userId); }
-            catch (java.io.IOException ex) {
+            try {
+                attachService.store(groupId, f, userId);
+            } catch (IOException ex) {
                 throw new ApiException("UPLOAD_FAIL", "첨부 업로드 실패: " + ex.getMessage());
             }
         }
