@@ -27,24 +27,83 @@
 <div class="row g-3">
     <div class="col-md-4">
         <div class="card">
-            <div class="card-body text-center">
-                <div class="display-3 text-primary"><i class="bi bi-person-circle"></i></div>
+            <div class="card-body text-center pb-3">
+                <div class="profile-avatar mx-auto">
+                    <i class="bi bi-person-fill"></i>
+                </div>
                 <h4 class="mt-2 mb-0">${user.name}</h4>
-                <div class="text-muted">${user.positionNm} · ${user.deptNm}</div>
-                <span class="badge bg-secondary mt-2">${user.roleNm}</span>
+                <div class="text-muted small">
+                    <c:if test="${not empty user.positionNm}">${user.positionNm}</c:if>
+                    <c:if test="${not empty user.positionNm and not empty user.deptNm}"> · </c:if>
+                    <c:if test="${not empty user.deptNm}">${user.deptNm}</c:if>
+                </div>
+                <div class="mt-2 d-flex justify-content-center flex-wrap gap-1">
+                    <span class="badge text-bg-light border">${user.roleNm}</span>
+                    <c:choose>
+                        <c:when test="${not empty user.resignDate}">
+                            <span class="badge bg-secondary"><i class="bi bi-box-arrow-right"></i> 퇴직</span>
+                        </c:when>
+                        <c:when test="${user.useYn eq 'N'}">
+                            <span class="badge bg-warning text-dark">비활성</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="badge bg-success">재직중</span>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
             </div>
             <ul class="list-group list-group-flush small">
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">이메일</span><span>${user.email}</span></li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">연락처</span><span>${user.phone}</span></li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">입사일</span><span>${user.hireDate}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-muted"><i class="bi bi-envelope me-1"></i>이메일</span>
+                    <a class="text-decoration-none text-body text-truncate ms-2"
+                       style="max-width:65%"
+                       href="mailto:${user.email}" title="${user.email}">${user.email}</a>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-muted"><i class="bi bi-telephone me-1"></i>연락처</span>
+                    <c:choose>
+                        <c:when test="${not empty user.phone}">
+                            <a class="text-decoration-none text-body" href="tel:${fn:replace(user.phone, '-', '')}">${user.phone}</a>
+                        </c:when>
+                        <c:otherwise><span class="text-muted">—</span></c:otherwise>
+                    </c:choose>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-muted"><i class="bi bi-calendar-event me-1"></i>입사일</span>
+                    <span>
+                        <c:choose>
+                            <c:when test="${not empty user.hireDate}">${user.hireDate}</c:when>
+                            <c:otherwise><span class="text-muted">—</span></c:otherwise>
+                        </c:choose>
+                    </span>
+                </li>
+                <c:if test="${not empty user.resignDate}">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-muted"><i class="bi bi-box-arrow-right me-1"></i>퇴사일</span>
+                    <span>${user.resignDate}</span>
+                </li>
+                </c:if>
                 <c:if test="${canViewSensitive}">
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">은행</span><span><c:out value="${user.bankCd}"/> <c:out value="${user.bankAccount}"/></span></li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">최근 로그인</span><span>${user.lastLoginAt}</span></li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-muted"><i class="bi bi-bank me-1"></i>은행 / 계좌</span>
+                    <span class="text-truncate ms-2" style="max-width:65%" title="${user.bankCd} ${user.bankAccount}">
+                        <c:choose>
+                            <c:when test="${not empty user.bankAccount}">
+                                <c:out value="${user.bankCd}"/> <c:out value="${user.bankAccount}"/>
+                            </c:when>
+                            <c:otherwise><span class="text-muted">—</span></c:otherwise>
+                        </c:choose>
+                    </span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-muted"><i class="bi bi-clock-history me-1"></i>최근 로그인</span>
+                    <span class="text-muted small">
+                        <c:choose>
+                            <c:when test="${not empty user.lastLoginAt}">${user.lastLoginAt}</c:when>
+                            <c:otherwise>—</c:otherwise>
+                        </c:choose>
+                    </span>
+                </li>
                 </c:if>
             </ul>
         </div>

@@ -822,3 +822,24 @@ kbd {
 /* ───── 단축키 도움말 모달 ───── */
 .shortcuts-table td { padding: .45rem .6rem; vertical-align: middle; border: 0; }
 .shortcuts-table td:first-child { width: 35%; }
+
+/* ───── 프로필 아바타 ───── */
+.profile-avatar {
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gw-primary-soft) 0%, #fff 100%);
+    border: 1px solid var(--gw-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.4rem;
+    color: var(--gw-primary);
+    box-shadow: var(--gw-shadow-sm);
+}
+body.dark-mode .profile-avatar {
+    background: linear-gradient(135deg, rgba(79,70,229,.18) 0%, var(--gw-surface) 100%);
+    border-color: var(--gw-border);
+}
+
+/* ───── 다크모드: 빈 상태 톤 보정 ───── */
+body.dark-mode .empty-state          { color: var(--gw-muted); }
+body.dark-mode .empty-state-icon     { color: #334155; }
+body.dark-mode .empty-state-title    { color: var(--gw-text-strong); }
