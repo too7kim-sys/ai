@@ -53,16 +53,21 @@
     <div class="col-md-8">
         <c:if test="${!canViewSensitive}">
         <div class="card">
-            <div class="card-body text-muted text-center py-5">
-                <i class="bi bi-shield-lock fs-3 d-block mb-2"></i>
-                인사이력·인사기록·부양가족 정보는 본인 또는 인사 담당자만 열람할 수 있습니다.
+            <div class="empty-state py-5">
+                <i class="bi bi-shield-lock empty-state-icon"></i>
+                <div class="empty-state-title">민감 정보 보호 영역</div>
+                <div class="empty-state-desc small text-muted">
+                    인사이력·인사기록·부양가족·경력·학력·교육이수·상벌 정보는<br>
+                    본인 또는 인사 담당자(HR/ADMIN) 만 열람할 수 있습니다.
+                </div>
             </div>
         </div>
         </c:if>
         <c:if test="${canViewSensitive}">
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-clock-history"></i> 인사이력</span>
+                <span><i class="bi bi-clock-history"></i> 인사이력
+                    <small class="text-muted ms-1">총 ${empty histories ? 0 : histories.size()}건</small></span>
                 <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
                     <a class="btn btn-sm btn-outline-primary"
                        href="${pageContext.request.contextPath}/hr/history.do?userId=${user.userId}">전체 보기</a>
@@ -81,7 +86,10 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty histories}">
-                    <tr><td colspan="3" class="text-center text-muted py-3">이력 없음</td></tr>
+                    <tr><td colspan="3" class="empty-state">
+                        <i class="bi bi-clock-history empty-state-icon"></i>
+                        <div class="empty-state-title">아직 인사이력이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
@@ -89,7 +97,8 @@
 
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-journal-text"></i> 인사기록</span>
+                <span><i class="bi bi-journal-text"></i> 인사기록
+                    <small class="text-muted ms-1">총 ${empty records ? 0 : records.size()}건</small></span>
                 <sec:authorize access="hasAnyRole('ADMIN','HR_MANAGER')">
                     <a class="btn btn-sm btn-outline-primary"
                        href="${pageContext.request.contextPath}/hr/record.do?userId=${user.userId}">관리</a>
@@ -106,14 +115,20 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty records}">
-                    <tr><td colspan="3" class="text-center text-muted py-3">기록 없음</td></tr>
+                    <tr><td colspan="3" class="empty-state">
+                        <i class="bi bi-journal-text empty-state-icon"></i>
+                        <div class="empty-state-title">아직 인사기록이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
         </div>
 
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-people-fill"></i> 부양가족</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people-fill"></i> 부양가족
+                    <small class="text-muted ms-1">총 ${empty families ? 0 : families.size()}건</small></span>
+            </div>
             <table class="table table-sm mb-0">
                 <thead class="table-light"><tr><th>관계</th><th>이름</th><th>생년월일</th><th>부양</th><th>경로/장애</th></tr></thead>
                 <tbody>
@@ -130,7 +145,10 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty families}">
-                    <tr><td colspan="5" class="text-center text-muted py-3">등록 없음</td></tr>
+                    <tr><td colspan="5" class="empty-state">
+                        <i class="bi bi-people-fill empty-state-icon"></i>
+                        <div class="empty-state-title">등록된 부양가족이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
@@ -138,7 +156,10 @@
 
         <%-- ─────────── 경력 ─────────── --%>
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-briefcase"></i> 경력 (이전 회사)</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-briefcase"></i> 경력 <small class="text-muted">(이전 회사)</small>
+                    <small class="text-muted ms-1">총 ${empty careers ? 0 : careers.size()}건</small></span>
+            </div>
             <table class="table table-sm mb-0 align-middle">
                 <thead class="table-light"><tr><th>회사</th><th>직책</th><th style="width:200px">기간</th><th>업무</th><c:if test="${canManage}"><th style="width:60px"></th></c:if></tr></thead>
                 <tbody>
@@ -161,7 +182,10 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty careers}">
-                    <tr><td colspan="${canManage ? 5 : 4}" class="text-center text-muted py-3">등록된 경력이 없습니다.</td></tr>
+                    <tr><td colspan="${canManage ? 5 : 4}" class="empty-state">
+                        <i class="bi bi-briefcase empty-state-icon"></i>
+                        <div class="empty-state-title">등록된 경력이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
@@ -183,7 +207,10 @@
 
         <%-- ─────────── 학력 ─────────── --%>
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-mortarboard"></i> 학력</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-mortarboard"></i> 학력
+                    <small class="text-muted ms-1">총 ${empty educations ? 0 : educations.size()}건</small></span>
+            </div>
             <table class="table table-sm mb-0 align-middle">
                 <thead class="table-light"><tr><th>학교</th><th>전공</th><th>학위</th><th>상태</th><th>기간</th><c:if test="${canManage}"><th style="width:60px"></th></c:if></tr></thead>
                 <tbody>
@@ -214,7 +241,10 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty educations}">
-                    <tr><td colspan="${canManage ? 6 : 5}" class="text-center text-muted py-3">등록된 학력이 없습니다.</td></tr>
+                    <tr><td colspan="${canManage ? 6 : 5}" class="empty-state">
+                        <i class="bi bi-mortarboard empty-state-icon"></i>
+                        <div class="empty-state-title">등록된 학력이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
@@ -246,7 +276,10 @@
 
         <%-- ─────────── 교육이수 ─────────── --%>
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-journal-bookmark"></i> 교육이수</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-bookmark"></i> 교육이수
+                    <small class="text-muted ms-1">총 ${empty trainings ? 0 : trainings.size()}건</small></span>
+            </div>
             <table class="table table-sm mb-0 align-middle">
                 <thead class="table-light"><tr><th>과정</th><th>주관</th><th>기간</th><th>시간</th><th>수료번호</th><c:if test="${canManage}"><th style="width:60px"></th></c:if></tr></thead>
                 <tbody>
@@ -270,7 +303,10 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty trainings}">
-                    <tr><td colspan="${canManage ? 6 : 5}" class="text-center text-muted py-3">교육이수 내역이 없습니다.</td></tr>
+                    <tr><td colspan="${canManage ? 6 : 5}" class="empty-state">
+                        <i class="bi bi-journal-bookmark empty-state-icon"></i>
+                        <div class="empty-state-title">교육이수 내역이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
@@ -460,7 +496,10 @@
 
         <%-- ─────────── 상벌 ─────────── --%>
         <div class="card">
-            <div class="card-header"><i class="bi bi-award"></i> 상벌</div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-award"></i> 상벌
+                    <small class="text-muted ms-1">총 ${empty awards ? 0 : awards.size()}건</small></span>
+            </div>
             <table class="table table-sm mb-0 align-middle">
                 <thead class="table-light"><tr><th>구분</th><th>일자</th><th>제목</th><th>수여기관</th><th>사유</th><c:if test="${canEditAward}"><th style="width:60px"></th></c:if></tr></thead>
                 <tbody>
@@ -489,7 +528,10 @@
                     </tr>
                 </c:forEach>
                 <c:if test="${empty awards}">
-                    <tr><td colspan="${canEditAward ? 6 : 5}" class="text-center text-muted py-3">등록된 상벌이 없습니다.</td></tr>
+                    <tr><td colspan="${canEditAward ? 6 : 5}" class="empty-state">
+                        <i class="bi bi-award empty-state-icon"></i>
+                        <div class="empty-state-title">등록된 상벌이 없습니다</div>
+                    </td></tr>
                 </c:if>
                 </tbody>
             </table>
