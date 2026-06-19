@@ -1,37 +1,71 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="c"   uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"  %>
 <title>내 급여명세서</title>
-<h2 class="mb-4"><i class="bi bi-cash"></i> 내 급여명세서</h2>
-<div class="card shadow-sm">
-    <table class="table table-hover mb-0">
+
+<h2 class="mb-3"><i class="bi bi-cash text-success"></i> 내 급여명세서</h2>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-ul"></i> 발행 내역
+            <small class="text-muted ms-1">총 ${empty list ? 0 : list.size()}건</small></span>
+        <small class="text-muted d-none d-md-inline">금액 단위: 원</small>
+    </div>
+    <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
-        <tr><th>지급월</th><th class="text-end">총 지급액</th><th class="text-end">공제</th><th class="text-end">실 수령</th><th>상태</th><th>지급일</th><th></th></tr>
+            <tr>
+                <th style="width:110px">지급월</th>
+                <th class="text-end">총 지급액</th>
+                <th class="text-end">공제</th>
+                <th class="text-end">실 수령</th>
+                <th style="width:100px">상태</th>
+                <th style="width:120px">지급일</th>
+                <th style="width:140px"></th>
+            </tr>
         </thead>
         <tbody>
         <c:forEach var="p" items="${list}">
             <tr>
-                <td>${p.payMonth}</td>
+                <td><strong>${p.payMonth}</strong></td>
                 <td class="text-end"><fmt:formatNumber value="${p.grossPay}"/></td>
-                <td class="text-end"><fmt:formatNumber value="${p.deductionTotal}"/></td>
+                <td class="text-end text-warning"><fmt:formatNumber value="${p.deductionTotal}"/></td>
                 <td class="text-end fw-bold text-primary"><fmt:formatNumber value="${p.netPay}"/></td>
                 <td>
                     <c:choose>
                         <c:when test="${p.statusCd == 'PAID'}"><span class="badge bg-success">지급완료</span></c:when>
-                        <c:when test="${p.statusCd == 'CONFIRMED'}"><span class="badge bg-info text-dark">확정</span></c:when>
-                        <c:when test="${p.statusCd == 'DRAFT'}"><span class="badge bg-secondary">작성중</span></c:when>
+                        <c:when test="${p.statusCd == 'CONFIRMED'}"><span class="badge bg-info">확정</span></c:when>
+                        <c:when test="${p.statusCd == 'DRAFT'}"><span class="badge text-bg-light border">작성중</span></c:when>
                         <c:otherwise><span class="badge bg-secondary">${p.statusCd}</span></c:otherwise>
                     </c:choose>
                 </td>
-                <td><c:if test="${p.paidDt != null}">${p.paidDt}</c:if></td>
+                <td class="small">
+                    <c:choose>
+                        <c:when test="${not empty p.paidDt}">${p.paidDt}</c:when>
+                        <c:otherwise><span class="text-muted">—</span></c:otherwise>
+                    </c:choose>
+                </td>
                 <td>
-                    <a class="btn btn-sm btn-outline-primary" href="${pageContext.request.contextPath}/payroll/my/detail.do?payMonth=${p.payMonth}">상세</a>
-                    <a class="btn btn-sm btn-outline-secondary" href="${pageContext.request.contextPath}/payroll/my/pdf.do?payMonth=${p.payMonth}">PDF</a>
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="${pageContext.request.contextPath}/payroll/my/detail.do?payMonth=${p.payMonth}"
+                       title="상세">
+                        <i class="bi bi-search"></i> 상세
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="${pageContext.request.contextPath}/payroll/my/pdf.do?payMonth=${p.payMonth}"
+                       title="PDF 다운로드">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
                 </td>
             </tr>
         </c:forEach>
         <c:if test="${empty list}">
-            <tr><td colspan="7" class="text-center text-muted py-4">발행된 명세서가 없습니다.</td></tr>
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <i class="bi bi-cash empty-state-icon"></i>
+                    <div class="empty-state-title">발행된 급여명세서가 없습니다</div>
+                    <div class="empty-state-desc small text-muted">매월 급여가 확정되면 여기에 자동으로 표시됩니다.</div>
+                </td>
+            </tr>
         </c:if>
         </tbody>
     </table>
