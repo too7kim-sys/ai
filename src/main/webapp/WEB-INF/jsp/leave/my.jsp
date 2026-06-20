@@ -45,6 +45,7 @@
         <span><i class="bi bi-list-ul"></i> 신청 내역
             <small class="text-muted ms-1">총 ${empty list ? 0 : list.size()}건</small></span>
     </div>
+    <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
             <tr>
@@ -112,4 +113,5 @@
         </c:if>
         </tbody>
     </table>
+    </div>
 </div>

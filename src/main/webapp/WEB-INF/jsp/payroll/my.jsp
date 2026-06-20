@@ -5,12 +5,48 @@
 
 <h2 class="mb-3"><i class="bi bi-cash text-success"></i> 내 급여명세서</h2>
 
+<%-- list 가 createdAt DESC 정렬이므로 첫 행이 가장 최근. 빠른 접근용 강조 카드. --%>
+<c:if test="${not empty list}">
+    <c:set var="latest" value="${list[0]}"/>
+    <div class="card border-primary mb-3 stat-card">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <div class="widget-label">최근 발행 — ${latest.payMonth}</div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="widget-value text-primary"><fmt:formatNumber value="${latest.netPay}"/></span>
+                    <small class="text-muted">원 실수령</small>
+                </div>
+                <div class="widget-trend text-muted">
+                    총 지급 <fmt:formatNumber value="${latest.grossPay}"/> ·
+                    공제 <span class="text-warning"><fmt:formatNumber value="${latest.deductionTotal}"/></span>
+                    <c:choose>
+                        <c:when test="${latest.statusCd == 'PAID'}"> · <span class="badge bg-success">지급완료</span></c:when>
+                        <c:when test="${latest.statusCd == 'CONFIRMED'}"> · <span class="badge bg-info">확정</span></c:when>
+                        <c:otherwise> · <span class="badge text-bg-light border">${latest.statusCd}</span></c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary btn-sm"
+                   href="${pageContext.request.contextPath}/payroll/my/detail.do?payMonth=${latest.payMonth}">
+                    <i class="bi bi-search"></i> 상세 보기
+                </a>
+                <a class="btn btn-outline-primary btn-sm"
+                   href="${pageContext.request.contextPath}/payroll/my/pdf.do?payMonth=${latest.payMonth}">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</c:if>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-list-ul"></i> 발행 내역
             <small class="text-muted ms-1">총 ${empty list ? 0 : list.size()}건</small></span>
         <small class="text-muted d-none d-md-inline">금액 단위: 원</small>
     </div>
+    <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
             <tr>
@@ -69,4 +105,5 @@
         </c:if>
         </tbody>
     </table>
+    </div>
 </div>

@@ -3,7 +3,7 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"  %>
 <title>내 근로계약</title>
 <h2 class="mb-3"><i class="bi bi-file-text"></i> 내 근로계약</h2>
-<div class="card"><table class="table table-hover mb-0 align-middle">
+<div class="card"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
     <thead class="table-light">
     <tr>
         <th>계약번호</th><th>종류</th><th>기간</th>
@@ -53,7 +53,7 @@
     </c:forEach>
     <c:if test="${empty list}"><tr><td colspan="8" class="text-center text-muted py-4">계약 데이터가 없습니다.</td></tr></c:if>
     </tbody>
-</table></div>
+</table></div></div>
 
 <div class="alert alert-info small mt-3">
     <i class="bi bi-info-circle"></i>
