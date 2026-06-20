@@ -22,6 +22,8 @@ public class LeaveRequestVO extends BaseVO {
     private LocalDateTime endAt;
     private BigDecimal days;
     private String reason;
+    /** 반차 구분 (HALF_TYPE): AM(오전) / PM(오후). HALF 가 아니면 null. */
+    private String halfTypeCd;
     /** DRAFT | IN_PROGRESS | APPROVED | REJECTED | CANCELED */
     private String statusCd;
     private Long approvalDocId;

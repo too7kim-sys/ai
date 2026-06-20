@@ -31,17 +31,30 @@
     <%-- 시간연차 전용 입력 --%>
     <div class="col-md-3" id="startTimeWrap" style="display:none">
         <label class="form-label">시작 시각</label>
-        <input type="time" class="form-control" name="startTime" id="startTime" step="3600" value="09:00"/>
+        <input type="time" class="form-control" name="startTime" id="startTime"
+               step="3600" min="09:00" max="17:00" value="09:00"/>
     </div>
     <div class="col-md-3" id="endTimeWrap" style="display:none">
         <label class="form-label">종료 시각</label>
-        <input type="time" class="form-control" name="endTime" id="endTime" step="3600" value="10:00"/>
+        <input type="time" class="form-control" name="endTime" id="endTime"
+               step="3600" min="10:00" max="18:00" value="10:00"/>
     </div>
     <div class="col-12" id="hourlyHint" style="display:none">
         <div class="small text-muted">
             <i class="bi bi-info-circle"></i>
-            시간연차는 1시간 단위로 신청합니다.
+            시간연차는 업무 시간(09:00~18:00) 내에서 1시간 단위로 신청합니다. 점심 시간(12:00~13:00)은 제외됩니다.
             예상 차감: <strong id="hourlyEst">0.125</strong>일
+        </div>
+    </div>
+
+    <%-- 반차 전용 입력 --%>
+    <div class="col-md-3" id="halfTypeWrap" style="display:none">
+        <label class="form-label">반차 구분</label>
+        <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="halfTypeCd" id="halfAm" value="AM" checked>
+            <label class="btn btn-outline-primary" for="halfAm">오전 (09~13)</label>
+            <input type="radio" class="btn-check" name="halfTypeCd" id="halfPm" value="PM">
+            <label class="btn btn-outline-primary" for="halfPm">오후 (13~18)</label>
         </div>
     </div>
 
@@ -73,6 +86,7 @@
     var eTWrap  = document.getElementById('endTimeWrap');
     var hint    = document.getElementById('hourlyHint');
     var est     = document.getElementById('hourlyEst');
+    var halfWrap= document.getElementById('halfTypeWrap');
     var startDt = document.getElementById('startDt');
     var sTime   = document.getElementById('startTime');
     var eTime   = document.getElementById('endTime');
@@ -86,6 +100,7 @@
 
     function syncMode() {
         var hourly = sel.value === 'HOURLY';
+        var half   = sel.value === 'HALF';
         endWrap.style.display = hourly ? 'none' : '';
         endIn.required        = !hourly;
         sTWrap.style.display  = hourly ? '' : 'none';
@@ -93,12 +108,18 @@
         hint.style.display    = hourly ? '' : 'none';
         sTime.required = hourly;
         eTime.required = hourly;
+        halfWrap.style.display = half ? '' : 'none';
+        // 반차는 단일 일자 — 종료일을 시작일로 자동 동기화
+        if (half && startDt.value) endIn.value = startDt.value;
         if (hourly) updateEst();
     }
 
     sel.addEventListener('change', syncMode);
     sTime.addEventListener('change', updateEst);
     eTime.addEventListener('change', updateEst);
+    startDt.addEventListener('change', function () {
+        if (sel.value === 'HALF') endIn.value = startDt.value;
+    });
     syncMode();
 })();
 </script>

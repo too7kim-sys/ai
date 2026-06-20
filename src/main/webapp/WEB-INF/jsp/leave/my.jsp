@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <title>내 휴가</title>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -64,7 +65,9 @@
                 <td>
                     <c:choose>
                         <c:when test="${r.leaveTypeCd == 'ANNUAL'}"><span class="badge text-bg-light border">연차</span></c:when>
-                        <c:when test="${r.leaveTypeCd == 'HALF'}"><span class="badge text-bg-light border">반차</span></c:when>
+                        <c:when test="${r.leaveTypeCd == 'HALF'}">
+                            <span class="badge text-bg-light border">반차<c:if test="${r.halfTypeCd == 'AM'}">·오전</c:if><c:if test="${r.halfTypeCd == 'PM'}">·오후</c:if></span>
+                        </c:when>
                         <c:when test="${r.leaveTypeCd == 'HOURLY'}"><span class="badge bg-info">시간연차</span></c:when>
                         <c:when test="${r.leaveTypeCd == 'SICK'}"><span class="badge text-bg-light border">병가</span></c:when>
                         <c:when test="${r.leaveTypeCd == 'FAMILY'}"><span class="badge text-bg-light border">경조사</span></c:when>
@@ -98,6 +101,16 @@
                            href="${pageContext.request.contextPath}/approval/detail.do?docId=${r.approvalDocId}">
                             <i class="bi bi-file-earmark-check"></i> 결재
                         </a>
+                    </c:if>
+                    <c:if test="${r.statusCd == 'IN_PROGRESS' or r.statusCd == 'APPROVED'}">
+                        <form method="post" action="${pageContext.request.contextPath}/leave/cancel.do"
+                              style="display:inline" onsubmit="return confirm('정말 취소하시겠습니까? 결재가 회수되고 잔여가 복구됩니다.');">
+                            <sec:csrfInput/>
+                            <input type="hidden" name="leaveId" value="${r.leaveId}"/>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> 취소
+                            </button>
+                        </form>
                     </c:if>
                 </td>
             </tr>

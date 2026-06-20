@@ -14,6 +14,7 @@
         <result property="endAt" column="end_at"/>
         <result property="days" column="days"/>
         <result property="reason" column="reason"/>
+        <result property="halfTypeCd" column="half_type_cd"/>
         <result property="statusCd" column="status_cd"/>
         <result property="approvalDocId" column="approval_doc_id"/>
         <result property="createdAt" column="created_at"/>
@@ -29,12 +30,44 @@
     <insert id="insertRequest" parameterType="egovframework.groupware.leave.service.LeaveRequestVO"
             useGeneratedKeys="true" keyProperty="leaveId" keyColumn="leave_id">
         INSERT INTO gw_leave_req (user_id, leave_type_cd, start_dt, end_dt,
-                                  start_at, end_at, days, reason,
+                                  start_at, end_at, days, reason, half_type_cd,
                                   status_cd, approval_doc_id)
         VALUES (#{userId}, #{leaveTypeCd}, #{startDt}, #{endDt},
-                #{startAt}, #{endAt}, #{days}, #{reason},
+                #{startAt}, #{endAt}, #{days}, #{reason}, #{halfTypeCd},
                 COALESCE(#{statusCd}, 'IN_PROGRESS'), #{approvalDocId})
     </insert>
+
+    <!-- 같은 사용자가 이미 신청한(IN_PROGRESS/APPROVED) 휴가 중 같은 일자에 겹치는 게 있는지 카운트.
+         시간연차는 시각 단위까지 비교하므로 별도 처리한다(서비스에서 분기). -->
+    <select id="countOverlappingDay" resultType="int">
+        SELECT COUNT(*) FROM gw_leave_req
+         WHERE user_id = #{userId}
+           AND status_cd IN ('IN_PROGRESS','APPROVED')
+           AND deleted_at IS NULL
+           AND leave_type_cd != 'HOURLY'
+           AND start_dt &lt;= #{end} AND end_dt &gt;= #{start}
+    </select>
+
+    <!-- 시간연차 시각 충돌 카운트. -->
+    <select id="countOverlappingHourly" resultType="int">
+        SELECT COUNT(*) FROM gw_leave_req
+         WHERE user_id = #{userId}
+           AND status_cd IN ('IN_PROGRESS','APPROVED')
+           AND deleted_at IS NULL
+           AND leave_type_cd = 'HOURLY'
+           AND start_at &lt; #{endAt} AND end_at &gt; #{startAt}
+    </select>
+
+    <!-- 종일 휴가(반차/시간연차 제외) 가 해당 일자에 IN_PROGRESS/APPROVED 로 잡혀 있으면 type 반환. -->
+    <select id="findFullDayLeaveTypeOn" resultType="string">
+        SELECT leave_type_cd FROM gw_leave_req
+         WHERE user_id = #{userId}
+           AND status_cd IN ('IN_PROGRESS','APPROVED')
+           AND deleted_at IS NULL
+           AND leave_type_cd NOT IN ('HALF','HOURLY')
+           AND start_dt &lt;= #{date} AND end_dt &gt;= #{date}
+         FETCH FIRST 1 ROWS ONLY
+    </select>
 
     <update id="updateRequestStatus">
         UPDATE gw_leave_req

@@ -43,6 +43,7 @@ public class LeaveController {
                         @RequestParam(required = false) String endDt,
                         @RequestParam(required = false) String startTime,
                         @RequestParam(required = false) String endTime,
+                        @RequestParam(required = false) String halfTypeCd,
                         @RequestParam(required = false) String reason,
                         @RequestParam(name = "approverIds", required = false) List<Long> approverIds) {
         if (approverIds == null || approverIds.isEmpty()) {
@@ -66,7 +67,15 @@ public class LeaveController {
             endAt   = LocalDateTime.of(start, LocalTime.parse(endTime));
         }
 
-        leaveService.apply(me.getUserId(), leaveTypeCd, start, end, startAt, endAt, reason, approverIds);
+        leaveService.apply(me.getUserId(), leaveTypeCd, start, end, startAt, endAt,
+                reason, approverIds, halfTypeCd);
+        return "redirect:/leave/my.do";
+    }
+
+    @PostMapping("/leave/cancel.do")
+    public String cancel(@AuthenticationPrincipal CustomUserDetails me,
+                         @RequestParam Long leaveId) {
+        leaveService.cancel(leaveId, me.getUserId());
         return "redirect:/leave/my.do";
     }
 

@@ -4,6 +4,7 @@ import egovframework.groupware.attendance.mapper.AttendanceMapper;
 import egovframework.groupware.attendance.service.AttendanceService;
 import egovframework.groupware.attendance.service.AttendanceVO;
 import egovframework.groupware.cmm.ApiException;
+import egovframework.groupware.leave.service.LeaveService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,8 +24,12 @@ public class AttendanceServiceImpl implements AttendanceService {
     private static final int STANDARD_MIN = 8 * 60;
 
     private final AttendanceMapper mapper;
+    private final LeaveService leaveService;
 
-    public AttendanceServiceImpl(AttendanceMapper mapper) { this.mapper = mapper; }
+    public AttendanceServiceImpl(AttendanceMapper mapper, LeaveService leaveService) {
+        this.mapper = mapper;
+        this.leaveService = leaveService;
+    }
 
     @Override
     @Transactional
@@ -32,6 +37,13 @@ public class AttendanceServiceImpl implements AttendanceService {
         LocalDate today = LocalDate.now();
         AttendanceVO existing = mapper.findByUserAndDate(userId, today);
         if (existing != null) return existing;
+
+        // 종일 휴가(연차/병가/경조사/기타)가 잡혀 있으면 출근 차단 — 반차/시간연차는 허용
+        String onLeave = leaveService.findFullDayLeaveTypeOn(userId, today);
+        if (onLeave != null) {
+            throw new ApiException("ON_LEAVE",
+                "오늘은 휴가(" + onLeave + ") 가 등록되어 있어 출근할 수 없습니다");
+        }
 
         LocalDateTime now = LocalDateTime.now();
         AttendanceVO vo = new AttendanceVO();
