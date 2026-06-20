@@ -47,13 +47,13 @@
         </div>
     </div>
 
-    <%-- 반차 전용 입력 --%>
+    <%-- 반차 전용 입력 — 비-HALF 모드에서는 disabled 로 폼 전송에서 제외. --%>
     <div class="col-md-3" id="halfTypeWrap" style="display:none">
         <label class="form-label">반차 구분</label>
         <div class="btn-group w-100" role="group">
-            <input type="radio" class="btn-check" name="halfTypeCd" id="halfAm" value="AM" checked>
+            <input type="radio" class="btn-check" name="halfTypeCd" id="halfAm" value="AM" checked disabled>
             <label class="btn btn-outline-primary" for="halfAm">오전 (09~13)</label>
-            <input type="radio" class="btn-check" name="halfTypeCd" id="halfPm" value="PM">
+            <input type="radio" class="btn-check" name="halfTypeCd" id="halfPm" value="PM" disabled>
             <label class="btn btn-outline-primary" for="halfPm">오후 (13~18)</label>
         </div>
     </div>
@@ -87,6 +87,8 @@
     var hint    = document.getElementById('hourlyHint');
     var est     = document.getElementById('hourlyEst');
     var halfWrap= document.getElementById('halfTypeWrap');
+    var halfAm  = document.getElementById('halfAm');
+    var halfPm  = document.getElementById('halfPm');
     var startDt = document.getElementById('startDt');
     var sTime   = document.getElementById('startTime');
     var eTime   = document.getElementById('endTime');
@@ -109,6 +111,8 @@
         sTime.required = hourly;
         eTime.required = hourly;
         halfWrap.style.display = half ? '' : 'none';
+        halfAm.disabled = !half;
+        halfPm.disabled = !half;
         // 반차는 단일 일자 — 종료일을 시작일로 자동 동기화
         if (half && startDt.value) endIn.value = startDt.value;
         if (hourly) updateEst();

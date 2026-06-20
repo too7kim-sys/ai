@@ -8,6 +8,8 @@ import egovframework.groupware.leave.service.LeaveBalanceRow;
 import egovframework.groupware.leave.service.LeaveBalanceVO;
 import egovframework.groupware.leave.service.LeaveRequestVO;
 import egovframework.groupware.leave.service.LeaveService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,8 @@ import java.util.List;
 
 @Service
 public class LeaveServiceImpl implements LeaveService {
+
+    private static final Logger log = LoggerFactory.getLogger(LeaveServiceImpl.class);
 
     private final LeaveMapper mapper;
     private final ApprovalService approvalService;
@@ -72,9 +76,10 @@ public class LeaveServiceImpl implements LeaveService {
             if (minutes < 60 || minutes % 60 != 0) {
                 throw new ApiException("INVALID_TIME", "시간연차는 1시간 단위로 신청해야 합니다");
             }
-            // days = hours / 8, NUMERIC(6,3) 에 맞춰 3자리 반올림
-            days = new BigDecimal(minutes).divide(new BigDecimal(60), 0, RoundingMode.HALF_UP)
-                    .divide(HOURS_PER_DAY, 3, RoundingMode.HALF_UP);
+            // days = minutes / (60 * 8). 분 단위 입력이 들어와도 정확히 환산되도록
+            // 480(=8h) 으로 한 번에 나누고 NUMERIC(6,3) 에 맞춰 3자리 반올림.
+            days = BigDecimal.valueOf(minutes)
+                    .divide(BigDecimal.valueOf(60L * 8L), 3, RoundingMode.HALF_UP);
             start = startAt.toLocalDate();
             end   = endAt.toLocalDate();
         } else {
@@ -111,14 +116,16 @@ public class LeaveServiceImpl implements LeaveService {
                 "같은 일자에 이미 신청한 휴가가 있습니다(결재 중 또는 승인됨).");
         }
 
-        int year = Year.now().getValue();
+        // 잔여 차감/복구는 휴가 시작 연도 기준으로 통일한다(연도 경계 신청에서
+        // apply 와 cancel/hook 간 연도가 어긋나 잔여가 누락되는 것을 방지).
+        int year = start.getYear();
         LeaveBalanceVO bal = mapper.findBalance(userId, year);
         if (bal == null) {
             mapper.upsertBalance(userId, year, new BigDecimal("15"));
             bal = mapper.findBalance(userId, year);
         }
         // 잔여 검증: 연차 계열(ANNUAL/HALF/HOURLY) 은 잔여에서 차감되므로 사전 검증.
-        boolean deductible = "ANNUAL".equals(leaveTypeCd) || hourly || half;
+        boolean deductible = isDeductible(leaveTypeCd);
         if (deductible && bal.remaining().compareTo(days) < 0) {
             throw new ApiException("INSUFFICIENT_BALANCE",
                 "연차 잔여(" + bal.remaining() + "일)가 신청일수(" + days + "일)보다 적습니다");
@@ -130,7 +137,9 @@ public class LeaveServiceImpl implements LeaveService {
         String title = hourly
                 ? "휴가 신청 - 시간연차 " + start + " "
                     + startAt.toLocalTime() + "~" + endAt.toLocalTime()
-                : "휴가 신청 - " + leaveTypeCd + " " + start + "~" + end;
+                : half
+                    ? "휴가 신청 - 반차(" + halfTypeCd + ") " + start
+                    : "휴가 신청 - " + leaveTypeCd + " " + start + "~" + end;
         doc.setTitle(title);
         StringBuilder json = new StringBuilder();
         json.append("{\"leaveTypeCd\":\"").append(leaveTypeCd).append("\"")
@@ -139,6 +148,9 @@ public class LeaveServiceImpl implements LeaveService {
         if (hourly) {
             json.append(",\"startAt\":\"").append(startAt).append("\"")
                 .append(",\"endAt\":\"").append(endAt).append("\"");
+        }
+        if (half) {
+            json.append(",\"halfTypeCd\":\"").append(halfTypeCd).append("\"");
         }
         json.append(",\"days\":").append(days)
             .append(",\"reason\":\"").append(escape(reason)).append("\"}");
@@ -182,10 +194,16 @@ public class LeaveServiceImpl implements LeaveService {
         if (!"IN_PROGRESS".equals(s) && !"APPROVED".equals(s)) {
             throw new ApiException("INVALID_STATE", "취소할 수 없는 상태입니다: " + s);
         }
-        // 결재 문서가 IN_PROGRESS 면 함께 회수
+        // 결재 문서가 IN_PROGRESS 면 함께 회수 — 회수 자체가 실패하더라도(이미 승인된 단계 존재 등)
+        // 휴가 취소는 진행하기 위해 예외를 흡수한다. ApprovalServiceImpl.cancel 은
+        // REQUIRES_NEW 로 별도 트랜잭션을 잡으므로 외부 트랜잭션이 rollback-only 로 오염되지 않는다.
         if ("IN_PROGRESS".equals(s) && r.getApprovalDocId() != null) {
-            try { approvalService.cancel(r.getApprovalDocId(), requesterId); }
-            catch (Exception ignore) { /* 이미 처리 중 등은 무시 */ }
+            try {
+                approvalService.cancel(r.getApprovalDocId(), requesterId);
+            } catch (Exception ex) {
+                log.warn("Approval cancel failed during leave cancel (leaveId={}, docId={}): {}",
+                        leaveId, r.getApprovalDocId(), ex.getMessage());
+            }
         }
         mapper.updateRequestStatus(leaveId, "CANCELED", null);
         // 잔여 복구 — apply 에서 즉시 차감했으므로 음수 더하기로 복구.

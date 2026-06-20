@@ -26,7 +26,7 @@
             <div class="card-body">
                 <div class="widget-label">올해 사용</div>
                 <div class="widget-value text-warning">${balance.annualUsed}<small class="text-muted fs-6 ms-1">일</small></div>
-                <div class="widget-trend text-muted">결재 완료 차감분</div>
+                <div class="widget-trend text-muted">결재중·승인 차감분 포함</div>
             </div>
         </div>
     </div>

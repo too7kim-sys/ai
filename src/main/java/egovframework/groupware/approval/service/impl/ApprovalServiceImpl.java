@@ -6,6 +6,7 @@ import egovframework.groupware.cmm.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
@@ -74,7 +75,7 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancel(Long docId, Long requesterId) {
         ApprovalDocVO d = mapper.findDoc(docId);
         if (d == null) throw new ApiException("DOC_NOT_FOUND", "문서를 찾을 수 없습니다");

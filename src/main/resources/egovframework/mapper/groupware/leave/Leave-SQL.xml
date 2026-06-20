@@ -37,25 +37,33 @@
                 COALESCE(#{statusCd}, 'IN_PROGRESS'), #{approvalDocId})
     </insert>
 
-    <!-- 같은 사용자가 이미 신청한(IN_PROGRESS/APPROVED) 휴가 중 같은 일자에 겹치는 게 있는지 카운트.
-         시간연차는 시각 단위까지 비교하므로 별도 처리한다(서비스에서 분기). -->
+    <!-- 일자 단위 휴가(연차/반차/병가/경조/기타) 신청 시 중복 검사.
+         같은 사용자의 IN_PROGRESS/APPROVED 휴가가 같은 일자에 잡혀 있는지 — 시간연차도 포함.
+         (HOURLY 의 start_dt/end_dt 는 단일 일자이므로 일자 비교만으로 충분히 잡힌다.) -->
     <select id="countOverlappingDay" resultType="int">
         SELECT COUNT(*) FROM gw_leave_req
          WHERE user_id = #{userId}
            AND status_cd IN ('IN_PROGRESS','APPROVED')
            AND deleted_at IS NULL
-           AND leave_type_cd != 'HOURLY'
            AND start_dt &lt;= #{end} AND end_dt &gt;= #{start}
     </select>
 
-    <!-- 시간연차 시각 충돌 카운트. -->
+    <!-- 시간연차 신청 시 중복 검사.
+         (a) 같은 시각대의 다른 HOURLY 가 있거나,
+         (b) 신청 일자에 일자 단위 휴가(비-HOURLY) 가 잡혀 있으면 막는다.
+         start_at 의 날짜 부분을 비교하기 위해 CAST AS DATE 사용 (표준 SQL, H2/PG 모두 지원). -->
     <select id="countOverlappingHourly" resultType="int">
         SELECT COUNT(*) FROM gw_leave_req
          WHERE user_id = #{userId}
            AND status_cd IN ('IN_PROGRESS','APPROVED')
            AND deleted_at IS NULL
-           AND leave_type_cd = 'HOURLY'
-           AND start_at &lt; #{endAt} AND end_at &gt; #{startAt}
+           AND (
+                (leave_type_cd = 'HOURLY'
+                  AND start_at &lt; #{endAt} AND end_at &gt; #{startAt})
+             OR (leave_type_cd != 'HOURLY'
+                  AND start_dt &lt;= CAST(#{startAt} AS DATE)
+                  AND end_dt   &gt;= CAST(#{startAt} AS DATE))
+           )
     </select>
 
     <!-- 종일 휴가(반차/시간연차 제외) 가 해당 일자에 IN_PROGRESS/APPROVED 로 잡혀 있으면 type 반환. -->
