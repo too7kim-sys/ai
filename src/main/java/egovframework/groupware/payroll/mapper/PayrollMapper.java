@@ -42,6 +42,13 @@ public interface PayrollMapper {
     java.util.List<java.util.Map<String, Object>> findPayrollEligibleUsers(
             @org.apache.ibatis.annotations.Param("firstOfMonth") java.time.LocalDate firstOfMonth);
 
+    /**
+     * 단일 사용자 입/퇴사일 조회. recalculate 시 일할 base 재계산용.
+     * Map 키: hireDate (LocalDate), resignDate (LocalDate)
+     */
+    java.util.Map<String, Object> findUserHireResign(
+            @org.apache.ibatis.annotations.Param("userId") Long userId);
+
     PayrollVO findPayroll(@Param("payId") Long payId);
 
     PayrollVO findByUserAndMonth(@Param("userId") Long userId,

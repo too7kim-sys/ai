@@ -123,6 +123,14 @@
          ORDER BY u.user_id
     </select>
 
+    <!-- 단일 사용자 입사/퇴사일 조회 — recalculate 시 일할 base 재계산에 사용. -->
+    <select id="findUserHireResign" resultType="map">
+        SELECT hire_date AS "hireDate",
+               resign_date AS "resignDate"
+          FROM gw_user
+         WHERE user_id = #{userId}
+    </select>
+
     <select id="findPayroll" resultMap="payrollMap">
         SELECT p.*, u.name AS user_name, d.dept_nm, u.email
           FROM gw_payroll p

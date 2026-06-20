@@ -29,6 +29,13 @@ public class PayrollServiceImpl implements PayrollService {
 
     private static final Logger log = LoggerFactory.getLogger(PayrollServiceImpl.class);
 
+    /** 월 일할 계산 비율의 소수 자리수 (백만분율). */
+    private static final int    PRORATION_SCALE = 6;
+    /** 화폐 금액의 반올림 자리수 (원 단위 정수). */
+    private static final int    MONEY_SCALE = 0;
+    /** 근태 집계가 없을 때 사용하는 기본 영업일수. */
+    private static final BigDecimal DEFAULT_WORK_DAYS = BigDecimal.valueOf(22);
+
     private final PayrollMapper mapper;
     private final BonusMapper bonusMapper;
     private final PayslipPdfWriter pdfWriter;
@@ -48,32 +55,25 @@ public class PayrollServiceImpl implements PayrollService {
     @Transactional
     public int generateForMonth(String payMonth) {
         YearMonth ym = YearMonth.parse(payMonth);
-        LocalDate firstOfMonth = ym.atDay(1);
-        LocalDate lastOfMonth  = ym.atEndOfMonth();
-        int monthDays = lastOfMonth.getDayOfMonth();
+        LocalDate first = ym.atDay(1);
+        LocalDate last  = ym.atEndOfMonth();
         int created = 0;
 
-        // 자기퇴사 처리: resign_date < 급여월 첫날 인 사용자는 SQL 단계에서 제외.
-        // 퇴사일이 급여월 안에 있는 사용자에 대해서는 재직일수 / 월일수 로 일할 계산.
-        for (Map<String, Object> row : mapper.findPayrollEligibleUsers(firstOfMonth)) {
+        // resign_date < 급여월 첫날 인 사용자는 SQL 단계에서 제외.
+        // 입사 월(hire_date) 과 퇴사 월(resign_date) 모두 재직일수/월일수로 일할 계산.
+        for (Map<String, Object> row : mapper.findPayrollEligibleUsers(first)) {
             Long userId = ((Number) row.get("userId")).longValue();
-            Object resignObj = row.get("resignDate");
-            LocalDate resignDate = toLocalDate(resignObj);
+            LocalDate hireDate   = toLocalDate(row.get("hireDate"));
+            LocalDate resignDate = toLocalDate(row.get("resignDate"));
 
             if (mapper.findByUserAndMonth(userId, payMonth) != null) continue;
-            SalaryContractVO sc = mapper.findCurrentContract(userId, lastOfMonth);
-            BigDecimal base = sc == null ? BigDecimal.ZERO : sc.getMonthlyBaseSal();
+            SalaryContractVO sc = mapper.findCurrentContract(userId, last);
+            BigDecimal contractBase = (sc == null) ? BigDecimal.ZERO : sc.getMonthlyBaseSal();
 
-            // 일할 계산 — 퇴사일이 이 달 안에 있을 때만
-            BigDecimal workDays = BigDecimal.valueOf(22);   // 기본 영업일
-            if (resignDate != null && !resignDate.isAfter(lastOfMonth)) {
-                int daysWorked = (int) ChronoUnit.DAYS.between(firstOfMonth, resignDate) + 1;
-                BigDecimal proration = BigDecimal.valueOf(daysWorked)
-                        .divide(BigDecimal.valueOf(monthDays), 6, RoundingMode.HALF_UP);
-                base = base.multiply(proration).setScale(0, RoundingMode.HALF_UP);
-                workDays = BigDecimal.valueOf(daysWorked);
-                log.info("Payroll proration for resigned user {} on {} : days={}/{} base→{}",
-                        userId, resignDate, daysWorked, monthDays, base);
+            Prorated pr = prorate(contractBase, hireDate, resignDate, first, last);
+            if (pr.prorated) {
+                log.info("Payroll proration uid={} {} hire={} resign={} days={} base {} → {}",
+                        userId, payMonth, hireDate, resignDate, pr.workDays, contractBase, pr.base);
             }
 
             PayrollVO p = new PayrollVO();
@@ -81,22 +81,12 @@ public class PayrollServiceImpl implements PayrollService {
             p.setPayMonth(payMonth);
             p.setContractId(sc == null ? null : sc.getContractId());
             p.setStatusCd("DRAFT");
-            p.setWorkDays(workDays);
+            p.setWorkDays(pr.workDays);
             mapper.insertPayroll(p);
-            recalculateInternal(p.getPayId(), Map.of(), base);
+            recalculateInternal(p.getPayId(), Map.of(), pr.base);
             created++;
         }
         return created;
-    }
-
-    private static LocalDate toLocalDate(Object o) {
-        if (o == null) return null;
-        if (o instanceof LocalDate) return (LocalDate) o;
-        if (o instanceof java.sql.Date) return ((java.sql.Date) o).toLocalDate();
-        if (o instanceof java.util.Date) {
-            return ((java.util.Date) o).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-        }
-        return LocalDate.parse(o.toString());
     }
 
     @Override
@@ -107,9 +97,67 @@ public class PayrollServiceImpl implements PayrollService {
         if ("PAID".equals(p.getStatusCd())) {
             throw new ApiException("PAYROLL_LOCKED", "지급 완료된 명세는 수정할 수 없습니다");
         }
-        SalaryContractVO sc = mapper.findCurrentContract(p.getUserId(), LocalDate.now());
-        BigDecimal base = sc == null ? BigDecimal.ZERO : sc.getMonthlyBaseSal();
-        return recalculateInternal(payId, manualPayments == null ? Map.of() : manualPayments, base);
+        // generateForMonth 와 같은 prorate 규칙을 사용해 일할 계산이 재계산에도 일관 적용되도록 한다.
+        YearMonth ym = YearMonth.parse(p.getPayMonth());
+        LocalDate first = ym.atDay(1);
+        LocalDate last  = ym.atEndOfMonth();
+        SalaryContractVO sc = mapper.findCurrentContract(p.getUserId(), last);
+        BigDecimal contractBase = (sc == null) ? BigDecimal.ZERO : sc.getMonthlyBaseSal();
+
+        Map<String, Object> u = mapper.findUserHireResign(p.getUserId());
+        LocalDate hireDate   = (u == null) ? null : toLocalDate(u.get("hireDate"));
+        LocalDate resignDate = (u == null) ? null : toLocalDate(u.get("resignDate"));
+        Prorated pr = prorate(contractBase, hireDate, resignDate, first, last);
+
+        return recalculateInternal(payId, manualPayments == null ? Map.of() : manualPayments, pr.base);
+    }
+
+    /** 입사일·퇴사일을 모두 반영한 월급 일할 계산 결과. */
+    private static final class Prorated {
+        final BigDecimal base;
+        final BigDecimal workDays;
+        final boolean prorated;
+        Prorated(BigDecimal base, BigDecimal workDays, boolean prorated) {
+            this.base = base; this.workDays = workDays; this.prorated = prorated;
+        }
+    }
+
+    /**
+     * 입사일·퇴사일을 모두 고려한 일할 계산.
+     * <ul>
+     *   <li>입사일이 급여월 첫날보다 늦으면 그 입사일부터 카운트</li>
+     *   <li>퇴사일이 급여월 마지막날보다 이르면 그 퇴사일까지 카운트</li>
+     *   <li>재직일수가 월 일수와 같으면 일할 적용 안 함 (기본 영업일 22 일 사용)</li>
+     * </ul>
+     */
+    private static Prorated prorate(BigDecimal base, LocalDate hireDate, LocalDate resignDate,
+                                    LocalDate first, LocalDate last) {
+        LocalDate start = (hireDate   != null && hireDate.isAfter(first))   ? hireDate   : first;
+        LocalDate end   = (resignDate != null && resignDate.isBefore(last)) ? resignDate : last;
+        if (end.isBefore(start)) {
+            // 입사 후 즉시 퇴사 등 경계 케이스 — 0 일.
+            return new Prorated(BigDecimal.ZERO, BigDecimal.ZERO, true);
+        }
+        int monthDays  = last.getDayOfMonth();
+        int daysWorked = (int) ChronoUnit.DAYS.between(start, end) + 1;
+        if (daysWorked >= monthDays) {
+            return new Prorated(base, DEFAULT_WORK_DAYS, false);
+        }
+        BigDecimal proration = BigDecimal.valueOf(daysWorked)
+                .divide(BigDecimal.valueOf(monthDays), PRORATION_SCALE, RoundingMode.HALF_UP);
+        BigDecimal proratedBase = base.multiply(proration)
+                .setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        return new Prorated(proratedBase, BigDecimal.valueOf(daysWorked), true);
+    }
+
+    private static LocalDate toLocalDate(Object o) {
+        if (o == null) return null;
+        if (o instanceof LocalDate) return (LocalDate) o;
+        if (o instanceof java.sql.Date) return ((java.sql.Date) o).toLocalDate();
+        if (o instanceof java.util.Date) {
+            return ((java.util.Date) o).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        }
+        return LocalDate.parse(o.toString());
     }
 
     private PayrollVO recalculateInternal(Long payId, Map<String, Long> manualPayments, BigDecimal base) {
