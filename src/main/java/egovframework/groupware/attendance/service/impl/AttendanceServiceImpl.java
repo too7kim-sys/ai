@@ -80,6 +80,11 @@ public class AttendanceServiceImpl implements AttendanceService {
         if (today.getDayOfWeek() == DayOfWeek.SATURDAY || today.getDayOfWeek() == DayOfWeek.SUNDAY) {
             statusCd = "HOLIDAY";
         }
+        // 출근 후 종일 휴가가 등록·승인된 경우(checkIn 시점에는 없었던 휴가) 휴가일로 마킹.
+        // 출근 기록 자체는 남기되 payroll 의 근무일 카운트에서는 제외된다.
+        if (leaveService.findFullDayLeaveTypeOn(userId, today) != null) {
+            statusCd = "LEAVE";
+        }
         mapper.updateCheckOut(att.getAttId(), now, workMin, otMin, nightMin, statusCd);
         return mapper.findByUserAndDate(userId, today);
     }

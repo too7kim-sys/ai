@@ -71,6 +71,8 @@
                         <c:when test="${a.statusCd eq 'LATE'}"><span class="badge bg-warning text-dark">지각</span></c:when>
                         <c:when test="${a.statusCd eq 'EARLY_LEAVE'}"><span class="badge bg-info">조기 퇴근</span></c:when>
                         <c:when test="${a.statusCd eq 'HOLIDAY'}"><span class="badge bg-secondary">휴일 근무</span></c:when>
+                        <c:when test="${a.statusCd eq 'LEAVE'}"><span class="badge text-bg-light border">휴가</span></c:when>
+                        <c:when test="${a.statusCd eq 'ABSENT'}"><span class="badge bg-danger">결근</span></c:when>
                         <c:otherwise><span class="badge bg-light text-dark">${a.statusCd}</span></c:otherwise>
                     </c:choose>
                 </td>
