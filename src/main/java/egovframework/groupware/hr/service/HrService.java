@@ -29,6 +29,19 @@ public interface HrService {
     void applyHrChange(Long targetUserId, Long newDeptId, Long newPositionId, String newRoleCd,
                        java.time.LocalDate effectiveDt, Long actorUserId);
 
+    /**
+     * 인사발령 취소(롤백) — 가장 최신 발령에 한해 허용. before_json 의 deptId/positionId/roleCd
+     * 로 사용자 정보를 복원하고 이력 행을 삭제한다.
+     *
+     * @return 롤백 직전 이력 (감사 로그 기록용 — 컨트롤러가 사용)
+     * @throws egovframework.groupware.cmm.ApiException
+     *         · NOT_FOUND : 해당 이력이 없음
+     *         · NOT_LATEST : 그 사용자의 가장 최신 이력이 아님(중간 이력은 롤백 불가)
+     *         · UNSUPPORTED : applyHrChange 가 만든 형식(deptId/positionId/roleCd 포함) 이 아닌
+     *                         외부 입력 이력(HIRE/TERMINATION 등) 은 롤백 불가
+     */
+    HrHistoryVO rollbackHistory(Long hisId, Long actorUserId);
+
     /* 부양가족 */
     Long createFamily(FamilyVO vo);
     void deleteFamily(Long famId, Long currentUserId);

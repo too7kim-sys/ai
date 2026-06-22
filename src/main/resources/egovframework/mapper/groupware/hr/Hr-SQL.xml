@@ -160,6 +160,29 @@
          LIMIT #{limit}
     </select>
 
+    <select id="findHistory" resultMap="historyMap">
+        SELECT <include refid="historyCols"/>
+          FROM gw_hr_history h
+          JOIN gw_user u ON u.user_id = h.user_id
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_CHANGE_TYPE' AND c.code_val = h.change_type_cd
+         WHERE h.his_id = #{hisId}
+    </select>
+
+    <!-- 가장 최신 발령 — 롤백 가능 여부 판정용. -->
+    <select id="findLatestHistoryByUser" resultMap="historyMap">
+        SELECT <include refid="historyCols"/>
+          FROM gw_hr_history h
+          JOIN gw_user u ON u.user_id = h.user_id
+          LEFT JOIN gw_code c ON c.group_cd = 'HR_CHANGE_TYPE' AND c.code_val = h.change_type_cd
+         WHERE h.user_id = #{userId}
+         ORDER BY h.effective_dt DESC, h.his_id DESC
+         LIMIT 1
+    </select>
+
+    <delete id="deleteHistory">
+        DELETE FROM gw_hr_history WHERE his_id = #{hisId}
+    </delete>
+
     <!-- 부양가족 -->
     <insert id="insertFamily" parameterType="egovframework.groupware.hr.service.FamilyVO"
             useGeneratedKeys="true" keyProperty="famId" keyColumn="fam_id">

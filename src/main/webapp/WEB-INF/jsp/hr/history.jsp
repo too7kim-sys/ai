@@ -85,22 +85,49 @@
 <div class="card">
     <table class="table mb-0">
         <thead class="table-light">
-            <tr><th>발효일</th><c:if test="${empty user}"><th>대상자</th></c:if><th>유형</th><th>변경 전</th><th>변경 후</th></tr>
+            <tr>
+                <th>발효일</th>
+                <c:if test="${empty user}"><th>대상자</th></c:if>
+                <th>유형</th>
+                <th>변경 전</th>
+                <th>변경 후</th>
+                <c:if test="${not empty user}"><th style="width:90px">작업</th></c:if>
+            </tr>
         </thead>
         <tbody>
-        <c:forEach var="h" items="${histories}">
+        <c:forEach var="h" items="${histories}" varStatus="st">
             <tr>
                 <td>${h.effectiveDt}</td>
                 <c:if test="${empty user}">
-                    <td><a href="?userId=${h.userId}">${h.userName}</a></td>
+                    <td><a href="?userId=${h.userId}"><c:out value="${h.userName}"/></a></td>
                 </c:if>
-                <td><span class="badge bg-info">${h.changeTypeNm != null ? h.changeTypeNm : h.changeTypeCd}</span></td>
-                <td class="small text-muted">${h.beforeText}</td>
-                <td class="small text-success">${h.afterText}</td>
+                <td><span class="badge bg-info"><c:out value="${h.changeTypeNm != null ? h.changeTypeNm : h.changeTypeCd}"/></span></td>
+                <td class="small text-muted"><c:out value="${h.beforeText}"/></td>
+                <td class="small text-success"><c:out value="${h.afterText}"/></td>
+                <%-- 취소는 자동 발령(부서/직급/역할 변경) 의 가장 최신 1건만 허용 --%>
+                <c:if test="${not empty user}">
+                    <td>
+                        <c:if test="${st.first
+                                      and (h.changeTypeCd == 'DEPT_CHANGE'
+                                        or h.changeTypeCd == 'POSITION_CHANGE'
+                                        or h.changeTypeCd == 'ROLE_CHANGE')}">
+                            <form method="post"
+                                  action="${pageContext.request.contextPath}/hr/admin/transfer/rollback.do"
+                                  onsubmit="return confirm('이 발령을 취소하고 변경 전 상태로 되돌릴까요?\n(부서/직급/역할이 발령 전 값으로 복원되고 이력에서도 삭제됩니다)');">
+                                <sec:csrfInput/>
+                                <input type="hidden" name="hisId"  value="${h.hisId}"/>
+                                <input type="hidden" name="userId" value="${user.userId}"/>
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    <i class="bi bi-arrow-counterclockwise"></i> 취소
+                                </button>
+                            </form>
+                        </c:if>
+                    </td>
+                </c:if>
             </tr>
         </c:forEach>
         <c:if test="${empty histories}">
-            <tr><td colspan="5" class="text-center text-muted py-4">이력이 없습니다.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">이력이 없습니다.</td></tr>
         </c:if>
         </tbody>
     </table>

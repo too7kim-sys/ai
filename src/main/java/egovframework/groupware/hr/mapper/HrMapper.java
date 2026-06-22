@@ -33,6 +33,10 @@ public interface HrMapper {
 
     /* 인사이력 */
     int insertHistory(HrHistoryVO vo);
+    HrHistoryVO findHistory(@Param("hisId") Long hisId);
+    int deleteHistory(@Param("hisId") Long hisId);
+    /** 해당 사용자의 가장 최신(effective_dt → his_id 내림차순 첫 행) 발령. 없으면 null. */
+    HrHistoryVO findLatestHistoryByUser(@Param("userId") Long userId);
     List<HrHistoryVO> listHistoryByUser(@Param("userId") Long userId);
     List<HrHistoryVO> listAllHistory(@Param("changeTypeCd") String changeTypeCd,
                                      @Param("limit") int limit);

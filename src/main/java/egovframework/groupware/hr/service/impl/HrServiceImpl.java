@@ -109,6 +109,56 @@ public class HrServiceImpl implements HrService {
         return decorateHistory(hrMapper.listAllHistory(changeTypeCd, limit > 0 ? limit : 200));
     }
 
+    @Override
+    @Transactional
+    public HrHistoryVO rollbackHistory(Long hisId, Long actorUserId) {
+        HrHistoryVO target = hrMapper.findHistory(hisId);
+        if (target == null) throw new ApiException("NOT_FOUND", "인사이력을 찾을 수 없습니다");
+
+        // 가장 최신 발령만 취소 허용 — 중간 이력을 지우면 사용자의 현재 상태와 이력이 어긋남.
+        HrHistoryVO latest = hrMapper.findLatestHistoryByUser(target.getUserId());
+        if (latest == null || !latest.getHisId().equals(hisId)) {
+            throw new ApiException("NOT_LATEST",
+                "가장 최근 발령만 취소할 수 있습니다. 이후 발령을 먼저 취소하세요.");
+        }
+
+        // applyHrChange 가 만든 발령만 롤백 가능 — before_json 에 deptId/positionId/roleCd 가
+        // 모두 들어있어야 한다. HIRE/TERMINATION 등 수기 입력은 사용자 정보 복원 정보가 없어
+        // 자동 롤백 불가.
+        com.fasterxml.jackson.databind.JsonNode node;
+        try {
+            node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(target.getBeforeJson());
+        } catch (Exception ex) {
+            throw new ApiException("UNSUPPORTED", "이 이력은 자동 취소를 지원하지 않습니다(데이터 형식)");
+        }
+        if (!node.hasNonNull("deptId") || !node.hasNonNull("positionId") || !node.hasNonNull("roleCd")) {
+            throw new ApiException("UNSUPPORTED",
+                "이 이력은 자동 취소를 지원하지 않습니다(부서/직급/역할 정보 부재)");
+        }
+
+        UserVO before = userMapper.findById(target.getUserId());
+        if (before == null) throw new ApiException("NOT_FOUND", "대상자를 찾을 수 없습니다");
+
+        // UserMapper.update 는 모든 컬럼을 덮어쓰므로, 복원하지 않는 필드(이름/연락처/입사일/퇴사일
+        // /은행계좌 등) 도 before 값으로 모두 채워야 한다. — 이전 동일 결함 fix 참고.
+        UserVO restore = new UserVO();
+        restore.setUserId(target.getUserId());
+        restore.setName(before.getName());
+        restore.setPhone(before.getPhone());
+        restore.setDeptId(node.get("deptId").asLong());
+        restore.setPositionId(node.get("positionId").asLong());
+        restore.setRoleCd(node.get("roleCd").asText());
+        restore.setHireDate(before.getHireDate());
+        restore.setResignDate(before.getResignDate());
+        restore.setResignReason(before.getResignReason());
+        restore.setBankCd(before.getBankCd());
+        restore.setBankAccount(before.getBankAccount());
+        userMapper.update(restore);
+
+        hrMapper.deleteHistory(hisId);
+        return target;
+    }
+
     /** 각 이력의 before/after JSON 을 사람이 읽을 수 있는 요약 텍스트로 변환한다. */
     private List<HrHistoryVO> decorateHistory(List<HrHistoryVO> list) {
         if (list == null || list.isEmpty()) return list;

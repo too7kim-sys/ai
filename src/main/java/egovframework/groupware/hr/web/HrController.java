@@ -2,8 +2,10 @@ package egovframework.groupware.hr.web;
 
 import egovframework.groupware.auth.security.CustomUserDetails;
 import egovframework.groupware.hr.service.FamilyVO;
+import egovframework.groupware.hr.service.HrHistoryVO;
 import egovframework.groupware.hr.service.HrRecordVO;
 import egovframework.groupware.hr.service.HrService;
+import egovframework.groupware.sys.service.AuditLogService;
 import egovframework.groupware.user.service.UserService;
 import egovframework.groupware.user.service.UserVO;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,7 +15,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 
 @Controller
@@ -21,10 +25,12 @@ public class HrController {
 
     private final HrService hrService;
     private final UserService userService;
+    private final AuditLogService auditService;
 
-    public HrController(HrService hrService, UserService userService) {
+    public HrController(HrService hrService, UserService userService, AuditLogService auditService) {
         this.hrService = hrService;
         this.userService = userService;
+        this.auditService = auditService;
     }
 
     /* ===== 조직도 ===== */
@@ -111,6 +117,33 @@ public class HrController {
                 ? LocalDate.now() : LocalDate.parse(effectiveDt);
         hrService.applyHrChange(userId, deptId, positionId, roleCd, eff, me.getUserId());
         return "redirect:/hr/history.do?userId=" + userId;
+    }
+
+    /* 인사발령 취소 — 가장 최신 발령만 허용. 사용자 정보(부서/직급/역할) 를 before 로 복원 + 이력 삭제. */
+    @PostMapping("/hr/admin/transfer/rollback.do")
+    @PreAuthorize("hasAnyRole('ADMIN','HR_MANAGER')")
+    public String rollbackTransfer(@AuthenticationPrincipal CustomUserDetails me,
+                                   @RequestParam Long hisId,
+                                   @RequestParam Long userId,
+                                   HttpServletRequest req,
+                                   RedirectAttributes ra) {
+        HrHistoryVO removed = hrService.rollbackHistory(hisId, me.getUserId());
+        // 감사 로그: 어떤 발령을 누가 언제 취소했는지 기록 — 인사 변경은 사후 추적이 필수.
+        String detail = "{\"hisId\":" + removed.getHisId()
+                + ",\"userId\":" + removed.getUserId()
+                + ",\"changeTypeCd\":\"" + removed.getChangeTypeCd() + "\""
+                + ",\"effectiveDt\":\"" + removed.getEffectiveDt() + "\"}";
+        auditService.log(me.getUserId(), "HR_HISTORY_ROLLBACK", "HR_HISTORY",
+                removed.getHisId().toString(), removed.getAfterJson(), detail, ip(req));
+        ra.addFlashAttribute("flashMsg", "인사발령이 취소되었습니다.");
+        ra.addFlashAttribute("flashType", "success");
+        return "redirect:/hr/history.do?userId=" + userId;
+    }
+
+    private String ip(HttpServletRequest req) {
+        String h = req.getHeader("X-Forwarded-For");
+        if (h != null && !h.isBlank()) return h.split(",")[0].trim();
+        return req.getRemoteAddr();
     }
 
     /* ===== 부양가족 ===== */
