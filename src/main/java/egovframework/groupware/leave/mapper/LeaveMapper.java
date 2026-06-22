@@ -30,9 +30,16 @@ public interface LeaveMapper {
     int addUsed(@Param("userId") Long userId, @Param("year") int year,
                 @Param("days") BigDecimal days);
 
-    /** 관리자용 — 연도별 전체 활성 사용자 + 해당 연도 잔여를 조회. */
+    /** 관리자용 — 연도별 전체 활성 사용자 + 해당 연도 잔여를 조회. 퇴직자도 포함(화면 표시용). */
     List<LeaveBalanceRow> listBalancesForYear(@Param("year") int year,
                                               @Param("keyword") String keyword);
+
+    /**
+     * 일괄 부여(grant-all / grant-by-tenure) 대상자만 조회 — 해당 연도 시작일 기준
+     * 이미 퇴직한 사용자는 제외. 퇴직 예정이지만 그 해에 일부 재직하는 사람은 포함.
+     */
+    List<LeaveBalanceRow> listGrantTargetsForYear(@Param("year") int year,
+                                                  @Param("yearStart") java.time.LocalDate yearStart);
 
     /** 일자 단위(연차/반차/병가 등) 휴가 신청의 기존 IN_PROGRESS/APPROVED 와 일자 겹침 카운트. */
     int countOverlappingDay(@Param("userId") Long userId,

@@ -244,7 +244,9 @@ public class LeaveServiceImpl implements LeaveService {
     @Override
     @Transactional
     public int grantAll(int year, BigDecimal days) {
-        List<LeaveBalanceRow> rows = mapper.listBalancesForYear(year, null);
+        // 일괄 부여 대상은 listBalancesForYear(표시용 — 퇴직자 포함) 가 아니라
+        // listGrantTargetsForYear(해당 연도 시작 전 퇴직자 제외) 를 사용한다.
+        List<LeaveBalanceRow> rows = mapper.listGrantTargetsForYear(year, LocalDate.of(year, 1, 1));
         for (LeaveBalanceRow r : rows) mapper.upsertBalance(r.getUserId(), year, days);
         return rows.size();
     }
@@ -252,7 +254,7 @@ public class LeaveServiceImpl implements LeaveService {
     @Override
     @Transactional
     public int grantByTenure(int year) {
-        List<LeaveBalanceRow> rows = mapper.listBalancesForYear(year, null);
+        List<LeaveBalanceRow> rows = mapper.listGrantTargetsForYear(year, LocalDate.of(year, 1, 1));
         for (LeaveBalanceRow r : rows) {
             mapper.upsertBalance(r.getUserId(), year, calcDaysByTenure(r.getHireDate(), year));
         }

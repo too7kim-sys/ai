@@ -71,8 +71,13 @@ public class SysUserAdminController {
         if (hireDate != null && !hireDate.isBlank()) vo.setHireDate(LocalDate.parse(hireDate));
         Long newId = userService.createUser(vo, password);
 
+        String afterJson = "{"
+                + "\"email\":" + jsonStr(email)
+                + ",\"role\":" + jsonStr(roleCd)
+                + ",\"hireDate\":" + jsonStr(vo.getHireDate())
+                + "}";
         auditService.log(me.getUserId(), "USER_CREATE", "USER", newId.toString(),
-                null, "{\"email\":\"" + email + "\",\"role\":\"" + roleCd + "\"}", ip(req));
+                null, afterJson, ip(req));
         ra.addFlashAttribute("flashMsg", name + "(" + email + ") 사용자가 등록되었습니다.");
         ra.addFlashAttribute("flashType", "success");
         return "redirect:/sys/user/list.do";
@@ -119,8 +124,22 @@ public class SysUserAdminController {
         vo.setBankAccount(bankAccount);
         userService.update(vo);
 
+        // 인사 변경 추적 — 입사일/퇴사일 등은 휴가일수·급여 일할계산·퇴직금 산정의 기초가 되므로
+        // before/after 모두 기록해 변경 시점을 사후 감사할 수 있게 한다.
+        String beforeJson = "{"
+                + "\"name\":" + jsonStr(before.getName())
+                + ",\"hireDate\":" + jsonStr(before.getHireDate())
+                + ",\"resignDate\":" + jsonStr(before.getResignDate())
+                + ",\"resignReason\":" + jsonStr(before.getResignReason())
+                + "}";
+        String afterJson = "{"
+                + "\"name\":" + jsonStr(name)
+                + ",\"hireDate\":" + jsonStr(vo.getHireDate())
+                + ",\"resignDate\":" + jsonStr(vo.getResignDate())
+                + ",\"resignReason\":" + jsonStr(resignReason)
+                + "}";
         auditService.log(me.getUserId(), "USER_EDIT", "USER", userId.toString(),
-                null, "{\"name\":\"" + name + "\"}", ip(req));
+                beforeJson, afterJson, ip(req));
         ra.addFlashAttribute("flashMsg", "사용자 정보가 수정되었습니다.");
         ra.addFlashAttribute("flashType", "success");
         return "redirect:/user/profile.do?userId=" + userId;
@@ -130,5 +149,13 @@ public class SysUserAdminController {
         String h = req.getHeader("X-Forwarded-For");
         if (h != null && !h.isBlank()) return h.split(",")[0].trim();
         return req.getRemoteAddr();
+    }
+
+    /** audit log JSON 조립용 — null 은 "null", 그 외는 escape 한 큰따옴표 문자열로 인코딩. */
+    private static String jsonStr(Object v) {
+        if (v == null) return "null";
+        String s = v.toString().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "");
+        return "\"" + s + "\"";
     }
 }

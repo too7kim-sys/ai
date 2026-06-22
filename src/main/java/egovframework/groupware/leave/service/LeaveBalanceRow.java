@@ -14,6 +14,7 @@ public class LeaveBalanceRow {
     private String email;
     private String deptName;
     private LocalDate hireDate;
+    private LocalDate resignDate;
     private Integer year;
     private BigDecimal annualGiven;
     private BigDecimal annualUsed;

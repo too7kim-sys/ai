@@ -129,13 +129,14 @@
         <result property="email" column="email"/>
         <result property="deptName" column="dept_name"/>
         <result property="hireDate" column="hire_date"/>
+        <result property="resignDate" column="resign_date"/>
         <result property="year" column="bal_year"/>
         <result property="annualGiven" column="annual_given"/>
         <result property="annualUsed" column="annual_used"/>
     </resultMap>
 
     <select id="listBalancesForYear" resultMap="balRowMap">
-        SELECT u.user_id, u.name, u.email, u.hire_date,
+        SELECT u.user_id, u.name, u.email, u.hire_date, u.resign_date,
                d.dept_nm AS dept_name,
                #{year}   AS bal_year,
                COALESCE(b.annual_given, 0) AS annual_given,
@@ -151,5 +152,22 @@
              OR d.dept_nm ILIKE '%' || #{keyword} || '%')
         </if>
          ORDER BY d.dept_nm NULLS LAST, u.name
+    </select>
+
+    <!-- 일괄 부여 대상자 — 해당 연도 시작일 이전에 이미 퇴직한 사람 제외.
+         그 해 중도 퇴사 예정자는 포함(중도 퇴사 시 휴가 일할 정산은 별도 정책). -->
+    <select id="listGrantTargetsForYear" resultMap="balRowMap">
+        SELECT u.user_id, u.name, u.email, u.hire_date, u.resign_date,
+               d.dept_nm AS dept_name,
+               #{year}   AS bal_year,
+               COALESCE(b.annual_given, 0) AS annual_given,
+               COALESCE(b.annual_used,  0) AS annual_used
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_leave_balance b
+                 ON b.user_id = u.user_id AND b.bal_year = #{year}
+         WHERE u.deleted_at IS NULL AND u.use_yn = 'Y'
+           AND (u.resign_date IS NULL OR u.resign_date >= #{yearStart})
+         ORDER BY u.name
     </select>
 </mapper>

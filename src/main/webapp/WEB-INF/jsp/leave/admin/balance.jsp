@@ -36,7 +36,7 @@
             <div class="col-md-5">
                 <form method="post" action="${pageContext.request.contextPath}/leave/admin/balance/grant-all.do"
                       class="d-flex gap-2 align-items-end"
-                      onsubmit="return confirm('${year}년 전 직원에게 동일 일수를 부여합니다. 진행할까요?');">
+                      onsubmit="return confirm('${year}년 재직 중인 직원에게 동일 일수를 부여합니다 (${year}년 시작 전 퇴직자는 제외). 진행할까요?');">
                     <sec:csrfInput/>
                     <input type="hidden" name="year" value="${year}"/>
                     <div class="flex-grow-1">
@@ -51,7 +51,7 @@
             </div>
             <div class="col-md-5">
                 <form method="post" action="${pageContext.request.contextPath}/leave/admin/balance/grant-by-tenure.do"
-                      onsubmit="return confirm('입사일을 기준으로 표준 연차(1년 미만 11일 / 1년 이상 15일 / 3년차부터 2년마다 +1, 최대 25일)를 일괄 부여합니다. 진행할까요?');">
+                      onsubmit="return confirm('입사일을 기준으로 표준 연차(1년 미만 11일 / 1년 이상 15일 / 3년차부터 2년마다 +1, 최대 25일)를 일괄 부여합니다 (${year}년 시작 전 퇴직자는 제외). 진행할까요?');">
                     <sec:csrfInput/>
                     <input type="hidden" name="year" value="${year}"/>
                     <label class="form-label small text-muted mb-1">입사일 기반 자동 계산</label>
@@ -88,12 +88,15 @@
             </thead>
             <tbody>
                 <c:forEach var="r" items="${list}">
-                    <tr>
+                    <tr <c:if test="${r.resignDate != null}">class="table-secondary"</c:if>>
                         <td>
-                            <strong>${r.name}</strong>
-                            <div class="text-muted small">${r.email}</div>
+                            <strong><c:out value="${r.name}"/></strong>
+                            <c:if test="${r.resignDate != null}">
+                                <span class="badge bg-dark ms-1" title="퇴사일: ${r.resignDate}">퇴사</span>
+                            </c:if>
+                            <div class="text-muted small"><c:out value="${r.email}"/></div>
                         </td>
-                        <td>${r.deptName}</td>
+                        <td><c:out value="${r.deptName}"/></td>
                         <td>${r.hireDate != null ? r.hireDate : '-'}</td>
                         <td class="text-end">${r.annualGiven}</td>
                         <td class="text-end text-warning">${r.annualUsed}</td>
