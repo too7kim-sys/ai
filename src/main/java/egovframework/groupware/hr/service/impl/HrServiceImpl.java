@@ -174,6 +174,12 @@ public class HrServiceImpl implements HrService {
         update.setDeptId(deptChanged ? newDeptId : before.getDeptId());
         update.setPositionId(posChanged ? newPositionId : before.getPositionId());
         update.setRoleCd(roleChanged ? newRoleCd : before.getRoleCd());
+        // UserMapper.update SQL 은 모든 컬럼을 unconditional 로 덮어쓰므로,
+        // 변경 대상이 아닌 필드도 반드시 before 값으로 보존해야 한다.
+        // (입사일/퇴사일/퇴사사유 누락 시 NULL 로 덮어써져 휴가일수·급여 일할계산이 깨짐)
+        update.setHireDate(before.getHireDate());
+        update.setResignDate(before.getResignDate());
+        update.setResignReason(before.getResignReason());
         update.setBankCd(before.getBankCd());
         update.setBankAccount(before.getBankAccount());
         userMapper.update(update);

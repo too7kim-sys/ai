@@ -36,5 +36,17 @@ public interface UserService {
 
     List<UserVO> listAll();
 
+    /**
+     * 사용자 프로필 일괄 UPDATE — UPDATE SQL 은 다음 컬럼을 모두 unconditional 로 덮어쓴다:
+     * name, phone, deptId, positionId, roleCd, hireDate, resignDate, resignReason,
+     * bankCd, bankAccount.
+     *
+     * <p>따라서 호출자는 변경하지 않을 필드도 반드시 기존 값(예: {@code before.getHireDate()})
+     * 으로 채워서 넘겨야 한다. 누락하면 해당 컬럼이 NULL 로 덮어써지면서 휴가일수 화면의 입사일,
+     * 급여 일할계산, 퇴직금 기준일 등 파생 데이터가 모두 깨진다.</p>
+     *
+     * <p>email/password/roleCd 만 바꾸려면 각각 {@link #changeEmail}, {@link #updatePassword},
+     * {@link #updateRole} 의 부분 UPDATE 를 사용한다.</p>
+     */
     void update(UserVO vo);
 }
