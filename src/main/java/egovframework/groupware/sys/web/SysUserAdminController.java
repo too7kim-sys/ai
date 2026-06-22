@@ -88,8 +88,8 @@ public class SysUserAdminController {
         UserVO u = userService.findById(userId);
         if (u == null) return "redirect:/sys/user/list.do";
         model.addAttribute("u", u);
-        model.addAttribute("depts", hrService.findAllDepts());
-        model.addAttribute("positions", hrService.findAllPositions());
+        // 부서/직급은 이 화면에서 변경할 수 없으므로 select 옵션은 더 이상 필요 없음.
+        // 변경은 /hr/history.do (인사발령) 경로를 사용한다.
         return "sys/user-edit";
     }
 
@@ -98,8 +98,6 @@ public class SysUserAdminController {
                        @RequestParam Long userId,
                        @RequestParam String name,
                        @RequestParam(required = false) String phone,
-                       @RequestParam(required = false) Long deptId,
-                       @RequestParam(required = false) Long positionId,
                        @RequestParam(required = false) String hireDate,
                        @RequestParam(required = false) String resignDate,
                        @RequestParam(required = false) String resignReason,
@@ -114,10 +112,19 @@ public class SysUserAdminController {
         vo.setUserId(userId);
         vo.setName(name);
         vo.setPhone(phone);
-        vo.setDeptId(deptId);
-        vo.setPositionId(positionId);
-        vo.setRoleCd(before.getRoleCd());            // 역할 변경은 별도 액션
-        if (hireDate != null && !hireDate.isBlank()) vo.setHireDate(LocalDate.parse(hireDate));
+        // 부서/직급/역할은 이 화면에서 변경 불가 — 인사발령(/hr/history.do) 으로만 가능.
+        // 사용자 수정 화면에서 직접 바꾸면 인사이력에 기록이 안 남고 감사 추적이 끊긴다.
+        vo.setDeptId(before.getDeptId());
+        vo.setPositionId(before.getPositionId());
+        vo.setRoleCd(before.getRoleCd());
+        // 입사일은 빈 값 제출 시 NULL 로 덮어쓰지 않고 기존 값 보존(휴가일수·급여 일할계산이 모두
+        // hire_date 에 의존하므로 실수로 비우면 파생 데이터가 깨진다).
+        if (hireDate != null && !hireDate.isBlank()) {
+            vo.setHireDate(LocalDate.parse(hireDate));
+        } else {
+            vo.setHireDate(before.getHireDate());
+        }
+        // 퇴사일은 빈 값 = 재직중 의도로 NULL 허용(퇴사 취소 경로).
         if (resignDate != null && !resignDate.isBlank()) vo.setResignDate(LocalDate.parse(resignDate));
         vo.setResignReason(resignReason);
         vo.setBankCd(bankCd);

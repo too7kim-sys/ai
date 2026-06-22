@@ -37,21 +37,16 @@
         </div>
         <div class="col-md-6">
             <label class="form-label">부서</label>
-            <select name="deptId" class="form-select">
-                <option value="">- 선택 -</option>
-                <c:forEach var="d" items="${depts}">
-                    <option value="${d.deptId}" <c:if test="${d.deptId eq u.deptId}">selected</c:if>>${d.deptNm}</option>
-                </c:forEach>
-            </select>
+            <input type="text" class="form-control" value="${u.deptNm}" disabled/>
+            <div class="form-text">
+                부서 변경은 <a href="${pageContext.request.contextPath}/hr/history.do?userId=${u.userId}">인사발령</a>
+                 화면에서 처리합니다 (이력이 자동으로 기록됩니다).
+            </div>
         </div>
         <div class="col-md-6">
             <label class="form-label">직급</label>
-            <select name="positionId" class="form-select">
-                <option value="">- 선택 -</option>
-                <c:forEach var="p" items="${positions}">
-                    <option value="${p.positionId}" <c:if test="${p.positionId eq u.positionId}">selected</c:if>>${p.positionNm}</option>
-                </c:forEach>
-            </select>
+            <input type="text" class="form-control" value="${u.positionNm}" disabled/>
+            <div class="form-text">직급 변경은 인사발령 화면에서 처리합니다.</div>
         </div>
         <div class="col-md-6">
             <label class="form-label">은행 코드</label>
