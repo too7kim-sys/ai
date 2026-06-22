@@ -62,11 +62,29 @@
         UPDATE gw_approval_doc
            SET status_cd = 'IN_PROGRESS', submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
          WHERE doc_id = #{docId}
+           AND status_cd = 'DRAFT'
     </update>
+    <!-- 완료 처리 — 진행중일 때만 전이. 동시 act/cancel 과의 race 에서 첫 트랜잭션만 통과. -->
     <update id="complete">
         UPDATE gw_approval_doc
            SET status_cd = #{statusCd}, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
          WHERE doc_id = #{docId}
+           AND status_cd = 'IN_PROGRESS'
+    </update>
+    <!-- 회수 — 단일 SQL 로 race-free:
+         · 본인 문서 + 상태 = DRAFT/IN_PROGRESS
+         · 이미 승인된 단계(APPROVED) 가 하나도 없어야 함
+         조건 어긋나면 0 rows → 서비스가 INVALID_STATE 로 거부. -->
+    <update id="cancelDoc">
+        UPDATE gw_approval_doc
+           SET status_cd = 'CANCELED', updated_at = CURRENT_TIMESTAMP
+         WHERE doc_id = #{docId}
+           AND drafter_id = #{requesterId}
+           AND status_cd IN ('DRAFT','IN_PROGRESS')
+           AND NOT EXISTS (
+                SELECT 1 FROM gw_approval_line
+                 WHERE doc_id = #{docId} AND status_cd = 'APPROVED'
+           )
     </update>
 
     <insert id="insertLine" parameterType="egovframework.groupware.approval.service.ApprovalLineVO"
@@ -77,11 +95,25 @@
                 COALESCE(#{statusCd}, 'PENDING'))
     </insert>
 
+    <!-- 라인 결재 — PENDING 일 때만 전이. 동시 act 가 같은 라인을 두 번 결재하는 race 차단. -->
     <update id="updateLineApproval">
         UPDATE gw_approval_line
            SET status_cd = #{statusCd}, comment = #{comment}, acted_at = CURRENT_TIMESTAMP
          WHERE line_id = #{lineId}
+           AND status_cd = 'PENDING'
     </update>
+
+    <!-- 반려/회수 후 잔여 PENDING 라인을 SKIPPED 로 마킹 — UI 의 '대기' 표시 잔존 정리. -->
+    <update id="skipPendingLines">
+        UPDATE gw_approval_line
+           SET status_cd = 'SKIPPED', acted_at = CURRENT_TIMESTAMP
+         WHERE doc_id = #{docId}
+           AND status_cd = 'PENDING'
+    </update>
+
+    <select id="countLines" resultType="int">
+        SELECT COUNT(*) FROM gw_approval_line WHERE doc_id = #{docId}
+    </select>
 
     <select id="findDoc" resultMap="docMap">
         SELECT d.*, f.form_cd, f.form_nm,
@@ -117,35 +149,43 @@
          LIMIT 200
     </select>
 
+    <!-- 현재 결재자에게 대기 중인 문서. DISTINCT/JOIN 으로 row 곱셈을 일으키지 않도록 EXISTS 로 분리.
+         위임받은 사용자(delegated_to_user_id) 도 함께 잡힌다. -->
     <select id="listPending" resultMap="docMap">
-        SELECT DISTINCT d.*, f.form_cd, f.form_nm,
+        SELECT d.*, f.form_cd, f.form_nm,
                u.name AS drafter_name, dept.dept_nm AS drafter_dept
           FROM gw_approval_doc d
           JOIN gw_approval_form f ON f.form_id = d.form_id
           JOIN gw_user u ON u.user_id = d.drafter_id
           LEFT JOIN gw_dept dept ON dept.dept_id = u.dept_id
-          JOIN gw_approval_line l ON l.doc_id = d.doc_id
-         WHERE l.approver_id = #{approverId}
-           AND l.status_cd = 'PENDING'
-           AND d.status_cd = 'IN_PROGRESS'
-           AND l.step_no = (
-               SELECT MIN(l2.step_no) FROM gw_approval_line l2
-                WHERE l2.doc_id = d.doc_id AND l2.status_cd = 'PENDING'
+         WHERE d.status_cd = 'IN_PROGRESS'
+           AND EXISTS (
+               SELECT 1 FROM gw_approval_line l
+                WHERE l.doc_id = d.doc_id
+                  AND l.status_cd = 'PENDING'
+                  AND (l.approver_id = #{approverId} OR l.delegated_to_user_id = #{approverId})
+                  AND l.step_no = (
+                      SELECT MIN(l2.step_no) FROM gw_approval_line l2
+                       WHERE l2.doc_id = d.doc_id AND l2.status_cd = 'PENDING'
+                  )
            )
          ORDER BY d.submitted_at DESC
          LIMIT 200
     </select>
 
     <select id="listCompleted" resultMap="docMap">
-        SELECT DISTINCT d.*, f.form_cd, f.form_nm,
+        SELECT d.*, f.form_cd, f.form_nm,
                u.name AS drafter_name, dept.dept_nm AS drafter_dept
           FROM gw_approval_doc d
           JOIN gw_approval_form f ON f.form_id = d.form_id
           JOIN gw_user u ON u.user_id = d.drafter_id
           LEFT JOIN gw_dept dept ON dept.dept_id = u.dept_id
-          JOIN gw_approval_line l ON l.doc_id = d.doc_id
-         WHERE l.approver_id = #{approverId}
-           AND l.status_cd IN ('APPROVED','REJECTED')
+         WHERE EXISTS (
+               SELECT 1 FROM gw_approval_line l
+                WHERE l.doc_id = d.doc_id
+                  AND l.status_cd IN ('APPROVED','REJECTED')
+                  AND (l.approver_id = #{approverId} OR l.delegated_to_user_id = #{approverId})
+           )
         <if test="status != null and status != ''">
            AND d.status_cd = #{status}
         </if>

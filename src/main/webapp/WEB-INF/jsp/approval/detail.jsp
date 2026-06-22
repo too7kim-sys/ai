@@ -1,13 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
-<title>${d.docNo}</title>
-<h2 class="mb-3"><i class="bi bi-file-earmark-text"></i> ${d.title}</h2>
+<title><c:out value="${d.docNo}"/></title>
+<h2 class="mb-3"><i class="bi bi-file-earmark-text"></i> <c:out value="${d.title}"/></h2>
 <div class="card mb-3"><div class="card-body">
     <dl class="row mb-0">
-        <dt class="col-sm-2">문서번호</dt><dd class="col-sm-4">${d.docNo}</dd>
-        <dt class="col-sm-2">양식</dt><dd class="col-sm-4">${d.formNm} (${d.formCd})</dd>
-        <dt class="col-sm-2">기안자</dt><dd class="col-sm-4">${d.drafterName} (${d.drafterDept})</dd>
+        <dt class="col-sm-2">문서번호</dt><dd class="col-sm-4"><c:out value="${d.docNo}"/></dd>
+        <dt class="col-sm-2">양식</dt><dd class="col-sm-4"><c:out value="${d.formNm}"/> (<c:out value="${d.formCd}"/>)</dd>
+        <dt class="col-sm-2">기안자</dt><dd class="col-sm-4"><c:out value="${d.drafterName}"/> (<c:out value="${d.drafterDept}"/>)</dd>
         <dt class="col-sm-2">상태</dt><dd class="col-sm-4">
             <c:choose>
                 <c:when test="${d.statusCd == 'DRAFT'}"><span class="badge bg-secondary">기안</span></c:when>
@@ -52,23 +52,25 @@
         <c:forEach var="l" items="${d.lines}">
             <tr>
                 <td>${l.stepNo}</td>
-                <td>${l.approverName}</td>
+                <td><c:out value="${l.approverName}"/></td>
                 <td>
                     <c:choose>
                         <c:when test="${l.lineTypeCd == 'APPROVE'}">결재</c:when>
                         <c:when test="${l.lineTypeCd == 'AGREE'}">합의</c:when>
                         <c:when test="${l.lineTypeCd == 'REFER'}">참조</c:when>
-                        <c:otherwise>${l.lineTypeCd}</c:otherwise>
+                        <c:otherwise><c:out value="${l.lineTypeCd}"/></c:otherwise>
                     </c:choose>
                 </td>
                 <td>
                     <c:choose>
                         <c:when test="${l.statusCd == 'APPROVED'}"><span class="badge bg-success">승인</span></c:when>
                         <c:when test="${l.statusCd == 'REJECTED'}"><span class="badge bg-danger">반려</span></c:when>
-                        <c:otherwise><span class="badge bg-warning text-dark">대기</span></c:otherwise>
+                        <c:when test="${l.statusCd == 'SKIPPED'}"><span class="badge bg-secondary">건너뜀</span></c:when>
+                        <c:when test="${l.statusCd == 'PENDING'}"><span class="badge bg-warning text-dark">대기</span></c:when>
+                        <c:otherwise><span class="badge bg-light text-dark"><c:out value="${l.statusCd}"/></span></c:otherwise>
                     </c:choose>
                 </td>
-                <td>${l.comment}</td>
+                <td><c:out value="${l.comment}"/></td>
                 <td>${l.actedAt}</td>
             </tr>
         </c:forEach>
@@ -77,9 +79,11 @@
 </div>
 
 <sec:authentication property="principal" var="me"/>
-<%-- 현재 대기 단계의 결재자만 액션 노출 --%>
+<%-- 현재 대기 단계의 결재자(또는 위임받은 사용자)만 액션 노출 --%>
 <c:forEach var="l" items="${d.lines}">
-    <c:if test="${l.statusCd == 'PENDING' and l.approverId == me.userId and d.statusCd == 'IN_PROGRESS'}">
+    <c:if test="${l.statusCd == 'PENDING'
+                  and (l.approverId == me.userId or l.delegatedToUserId == me.userId)
+                  and d.statusCd == 'IN_PROGRESS'}">
         <c:set var="canAct" value="true"/>
     </c:if>
     <c:if test="${l.statusCd == 'PENDING' and !empty canActPrev}"><c:remove var="canAct"/></c:if>
