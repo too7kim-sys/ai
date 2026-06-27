@@ -46,13 +46,11 @@ public class LeaveController {
                         @RequestParam(required = false) String halfTypeCd,
                         @RequestParam(required = false) String reason,
                         @RequestParam(name = "approverIds", required = false) List<Long> approverIds) {
+        // 결재선은 폼에서 명시적으로 선택해야 한다. 과거엔 미지정 시 admin@/userId=1 로
+        // 강제 할당해 무관한 사용자에게 결재가 발송되는 결함이 있었다.
         if (approverIds == null || approverIds.isEmpty()) {
-            // 결재선 미지정 시: 본인 부서장(없으면 HR 임의)을 기본 결재자로
-            approverIds = new ArrayList<>();
-            for (UserVO u : userService.search("admin@", null, 0, 1)) approverIds.add(u.getUserId());
-            if (approverIds.isEmpty()) {
-                approverIds.add(1L);
-            }
+            throw new egovframework.groupware.cmm.ApiException("NO_APPROVERS",
+                    "결재선을 1명 이상 선택하세요");
         }
 
         LocalDate start = (startDt != null && !startDt.isEmpty()) ? LocalDate.parse(startDt) : null;

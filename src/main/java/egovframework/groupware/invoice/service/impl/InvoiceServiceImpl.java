@@ -66,7 +66,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         InvoiceVO inv = mapper.findById(id);
         if (inv == null) throw new ApiException("NOT_FOUND", "인보이스를 찾을 수 없습니다");
         if ("DRAFT".equals(inv.getStatusCd())) mapper.issue(id);
-        mapper.applyPayment(id, paidDelta);
+        // SQL WHERE 의 paid_amount + delta <= amount_total 가드로 과결제 차단.
+        // 환불(음수 delta) 도 paid_amount + delta >= 0 가드로 음수 누적 차단.
+        if (mapper.applyPayment(id, paidDelta) != 1) {
+            throw new ApiException("INVALID_AMOUNT",
+                "결제 금액이 청구 잔액을 초과하거나 누적 결제액이 음수가 됩니다");
+        }
     }
 
     @Override public InvoiceVO findById(Long id) { return mapper.findById(id); }

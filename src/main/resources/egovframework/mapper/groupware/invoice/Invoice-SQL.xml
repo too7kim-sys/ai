@@ -77,6 +77,8 @@
          WHERE invoice_id = #{invoiceId} AND status_cd = 'DRAFT'
     </update>
 
+    <!-- 결제 적용 — 과결제(잔액 음수) 방지를 위해 paid_amount + paidDelta &lt;= amount_total
+         가드를 WHERE 절에 둔다. 조건 미충족 시 0 rows → 서비스가 INVALID_AMOUNT 거부. -->
     <update id="applyPayment">
         UPDATE gw_invoice
            SET paid_amount = paid_amount + #{paidDelta},
@@ -88,6 +90,8 @@
                END,
                updated_at = CURRENT_TIMESTAMP
          WHERE invoice_id = #{invoiceId} AND deleted_at IS NULL
+           AND paid_amount + #{paidDelta} &lt;= amount_total
+           AND paid_amount + #{paidDelta} &gt;= 0
     </update>
 
     <update id="markOverdue">

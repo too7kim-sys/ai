@@ -57,6 +57,13 @@ public class ExpenseServiceImpl implements ExpenseService {
             if (it.getVatAmount() == null) it.setVatAmount(BigDecimal.ZERO);
             if (it.getTotalAmount() == null)
                 it.setTotalAmount(it.getNetAmount().add(it.getVatAmount()));
+            // 음수 금액은 환불처럼 동작해 예산 사용액을 차감시키는 데이터 부정합을 만든다.
+            // 환불은 별도 액션으로 처리해야 하며, 신청 라인 자체는 0 이상만 허용.
+            if (it.getNetAmount().signum() < 0 || it.getVatAmount().signum() < 0
+                    || it.getTotalAmount().signum() < 0) {
+                throw new ApiException("INVALID_AMOUNT",
+                        "금액은 0 이상이어야 합니다 (환불은 별도 처리)");
+            }
             totNet = totNet.add(it.getNetAmount());
             totVat = totVat.add(it.getVatAmount());
             tot = tot.add(it.getTotalAmount());

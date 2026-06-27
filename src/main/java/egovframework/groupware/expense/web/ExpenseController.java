@@ -72,10 +72,11 @@ public class ExpenseController {
             if (receiptTypes != null && i < receiptTypes.size()) it.setReceiptTypeCd(receiptTypes.get(i));
             items.add(it);
         }
+        // 결재선은 폼에서 명시적으로 선택해야 한다. 과거엔 미지정 시 finance@/userId=1 로
+        // 강제 할당해 무관한 사용자에게 결재가 발송되는 결함이 있었다.
         if (approverIds == null || approverIds.isEmpty()) {
-            approverIds = new ArrayList<>();
-            for (UserVO u : userService.search("finance@", null, 0, 1)) approverIds.add(u.getUserId());
-            if (approverIds.isEmpty()) approverIds.add(1L);
+            throw new egovframework.groupware.cmm.ApiException("NO_APPROVERS",
+                    "결재선을 1명 이상 선택하세요");
         }
         service.create(r, items, approverIds);
         return "redirect:/expense/my.do";
