@@ -35,4 +35,14 @@ public interface UserMapper {
 
     int updatePassword(@Param("userId") Long userId,
                        @Param("passwordHash") String passwordHash);
+
+    int updateUseYn(@Param("userId") Long userId, @Param("useYn") String useYn);
+
+    int updateRole(@Param("userId") Long userId, @Param("roleCd") String roleCd);
+
+    int updateEmail(@Param("userId") Long userId, @Param("email") String email);
+
+    List<UserVO> listByDept(@Param("deptId") Long deptId);
+
+    List<UserVO> listAll();
 }

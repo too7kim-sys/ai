@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.notification.mapper.NotificationMapper">
+
+    <resultMap id="notiMap" type="egovframework.groupware.notification.service.NotificationVO">
+        <id property="notiId" column="noti_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="typeCd" column="type_cd"/>
+        <result property="title" column="title"/>
+        <result property="body" column="body"/>
+        <result property="linkUrl" column="link_url"/>
+        <result property="readAt" column="read_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="egovframework.groupware.notification.service.NotificationVO"
+            useGeneratedKeys="true" keyProperty="notiId" keyColumn="noti_id">
+        INSERT INTO gw_notification (user_id, type_cd, title, body, link_url)
+        VALUES (#{userId}, #{typeCd}, #{title}, #{body}, #{linkUrl})
+    </insert>
+
+    <select id="listByUser" resultMap="notiMap">
+        SELECT noti_id, user_id, type_cd, title, body, link_url, read_at, created_at
+          FROM gw_notification
+         WHERE user_id = #{userId}
+        <if test="onlyUnread">
+           AND read_at IS NULL
+        </if>
+         ORDER BY created_at DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="countUnread" resultType="long">
+        SELECT COUNT(*) FROM gw_notification
+         WHERE user_id = #{userId} AND read_at IS NULL
+    </select>
+
+    <update id="markRead">
+        UPDATE gw_notification
+           SET read_at = CURRENT_TIMESTAMP
+         WHERE noti_id = #{notiId} AND user_id = #{userId} AND read_at IS NULL
+    </update>
+
+    <update id="markAllRead">
+        UPDATE gw_notification
+           SET read_at = CURRENT_TIMESTAMP
+         WHERE user_id = #{userId} AND read_at IS NULL
+    </update>
+</mapper>

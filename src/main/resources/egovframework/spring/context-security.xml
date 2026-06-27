@@ -17,9 +17,33 @@
         <intercept-url pattern="/images/**" access="permitAll"/>
         <intercept-url pattern="/webjars/**" access="permitAll"/>
 
+        <intercept-url pattern="/sys/user/create.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/sys/user/edit.do"   access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/sys/**" access="hasRole('ADMIN')"/>
+        <!-- 경력 / 학력 / 교육이수 : 본인 또는 HR/ADMIN. 본인 검증은 컨트롤러에서. -->
+        <intercept-url pattern="/hr/career/**"    access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/career.do"    access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/education/**" access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/education.do" access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/training/**"  access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/training.do"  access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/project/**"   access="isAuthenticated()"/>
+        <intercept-url pattern="/hr/project.do"   access="isAuthenticated()"/>
+        <!-- 상벌 : HR/ADMIN 만 가능 (직원 본인 변경 불가). -->
+        <intercept-url pattern="/hr/award/**"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/award.do"     access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/mail/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/attendance/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
+        <intercept-url pattern="/notice/write.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
+        <intercept-url pattern="/notice/delete.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/payroll/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/hr/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/record.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/record/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/hr/history.do" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/evaluation/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/performance/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/performance/team.do" access="hasAnyRole('ADMIN','HR_MANAGER','MANAGER')"/>
         <intercept-url pattern="/contract/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
         <intercept-url pattern="/finance/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
         <intercept-url pattern="/vendor/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
@@ -27,6 +51,9 @@
         <intercept-url pattern="/invoice/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
         <intercept-url pattern="/payment/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
         <intercept-url pattern="/expense/admin/**" access="hasAnyRole('ADMIN','FINANCE_MANAGER')"/>
+        <intercept-url pattern="/leave/admin/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
+        <intercept-url pattern="/asset/my.do" access="isAuthenticated()"/>
+        <intercept-url pattern="/asset/**" access="hasAnyRole('ADMIN','HR_MANAGER')"/>
 
         <intercept-url pattern="/**" access="isAuthenticated()"/>
 
@@ -42,14 +69,15 @@
             logout-success-url="/login.do?logout"
             invalidate-session="true"
             delete-cookies="JSESSIONID"/>
-        <session-management invalid-session-url="/login.do?expired">
+        <session-management session-fixation-protection="newSession" invalid-session-url="/login.do?expired">
             <concurrency-control max-sessions="1" error-if-maximum-exceeded="false" expired-url="/login.do?expired"/>
         </session-management>
         <access-denied-handler error-page="/error/403.do"/>
         <csrf disabled="false"/>
         <headers>
-            <hsts include-sub-domains="true" max-age-seconds="31536000"/>
+            <hsts include-subdomains="true" max-age-seconds="31536000"/>
             <frame-options policy="SAMEORIGIN"/>
+            <referrer-policy policy="strict-origin-when-cross-origin"/>
         </headers>
     </http>
 

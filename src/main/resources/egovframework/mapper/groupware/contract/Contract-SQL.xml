@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.contract.mapper.ContractMapper">
+
+    <resultMap id="tplMap" type="egovframework.groupware.contract.service.ContractTemplateVO">
+        <id property="templateId" column="template_id"/>
+        <result property="templateNm" column="template_nm"/>
+        <result property="contractTypeCd" column="contract_type_cd"/>
+        <result property="bodyHtml" column="body_html"/>
+        <result property="defaultTermsJson" column="default_terms_json"/>
+        <result property="useYn" column="use_yn"/>
+    </resultMap>
+
+    <resultMap id="contractMap" type="egovframework.groupware.contract.service.EmploymentContractVO">
+        <id property="contractId" column="contract_id"/>
+        <result property="contractNo" column="contract_no"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="email" column="email"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="templateId" column="template_id"/>
+        <result property="templateNm" column="template_nm"/>
+        <result property="contractTypeCd" column="contract_type_cd"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="workplace" column="workplace"/>
+        <result property="jobDescription" column="job_description"/>
+        <result property="workHoursPerWeek" column="work_hours_per_week"/>
+        <result property="workStartTime" column="work_start_time"/>
+        <result property="workEndTime" column="work_end_time"/>
+        <result property="breakMinutes" column="break_minutes"/>
+        <result property="weeklyHoliday" column="weekly_holiday"/>
+        <result property="annualPaidLeaveDays" column="annual_paid_leave_days"/>
+        <result property="probationMonths" column="probation_months"/>
+        <result property="salaryContractId" column="salary_contract_id"/>
+        <result property="annualSalary" column="annual_salary"/>
+        <result property="monthlyBaseSal" column="monthly_base_sal"/>
+        <result property="paymentDay" column="payment_day"/>
+        <result property="insuranceAppliedJson" column="insurance_applied_json"/>
+        <result property="specialTerms" column="special_terms"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+        <result property="companySignedAt" column="company_signed_at"/>
+        <result property="employeeSignedAt" column="employee_signed_at"/>
+        <result property="employeeSignature" column="employee_signature"/>
+        <result property="terminationDt" column="termination_dt"/>
+        <result property="terminationReason" column="termination_reason"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="listTemplates" resultMap="tplMap">
+        SELECT * FROM gw_contract_template WHERE use_yn = 'Y' ORDER BY template_id
+    </select>
+
+    <select id="findTemplate" resultMap="tplMap">
+        SELECT * FROM gw_contract_template WHERE template_id = #{templateId}
+    </select>
+
+    <insert id="insert" parameterType="egovframework.groupware.contract.service.EmploymentContractVO"
+            useGeneratedKeys="true" keyProperty="contractId" keyColumn="contract_id">
+        INSERT INTO gw_employment_contract (
+            contract_no, user_id, template_id, contract_type_cd,
+            start_dt, end_dt, workplace, job_description,
+            work_hours_per_week, work_start_time, work_end_time, break_minutes,
+            weekly_holiday, annual_paid_leave_days, probation_months,
+            salary_contract_id, insurance_applied_json, special_terms,
+            status_cd, attach_group_id
+        ) VALUES (
+            #{contractNo}, #{userId}, #{templateId}, #{contractTypeCd},
+            #{startDt}, #{endDt}, #{workplace}, #{jobDescription},
+            COALESCE(#{workHoursPerWeek}, 40), #{workStartTime}, #{workEndTime},
+            COALESCE(#{breakMinutes}, 60),
+            #{weeklyHoliday}, COALESCE(#{annualPaidLeaveDays}, 15), COALESCE(#{probationMonths}, 0),
+            #{salaryContractId}, #{insuranceAppliedJson}, #{specialTerms},
+            COALESCE(#{statusCd}, 'DRAFT'), #{attachGroupId}
+        )
+    </insert>
+
+    <update id="update" parameterType="egovframework.groupware.contract.service.EmploymentContractVO">
+        UPDATE gw_employment_contract
+           SET workplace = #{workplace},
+               job_description = #{jobDescription},
+               work_hours_per_week = #{workHoursPerWeek},
+               work_start_time = #{workStartTime},
+               work_end_time = #{workEndTime},
+               break_minutes = #{breakMinutes},
+               annual_paid_leave_days = #{annualPaidLeaveDays},
+               special_terms = #{specialTerms},
+               salary_contract_id = #{salaryContractId},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE contract_id = #{contractId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE gw_employment_contract
+           SET status_cd = #{status}, updated_at = CURRENT_TIMESTAMP
+         WHERE contract_id = #{contractId}
+    </update>
+
+    <update id="markSigned">
+        UPDATE gw_employment_contract
+           SET employee_signed_at = CURRENT_TIMESTAMP,
+               employee_signature = #{signature},
+               status_cd = 'SIGNED',
+               updated_at = CURRENT_TIMESTAMP
+         WHERE contract_id = #{contractId}
+    </update>
+
+    <select id="findById" resultMap="contractMap">
+        SELECT ec.*,
+               u.name AS user_name, u.email,
+               d.dept_nm,
+               t.template_nm,
+               sc.annual_salary, sc.monthly_base_sal, sc.payment_day
+          FROM gw_employment_contract ec
+          JOIN gw_user u ON u.user_id = ec.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_contract_template t ON t.template_id = ec.template_id
+          LEFT JOIN gw_salary_contract sc ON sc.contract_id = ec.salary_contract_id
+         WHERE ec.contract_id = #{contractId}
+    </select>
+
+    <select id="listAll" resultMap="contractMap">
+        SELECT ec.*, u.name AS user_name, u.email, d.dept_nm, t.template_nm,
+               sc.annual_salary, sc.monthly_base_sal, sc.payment_day
+          FROM gw_employment_contract ec
+          JOIN gw_user u ON u.user_id = ec.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_contract_template t ON t.template_id = ec.template_id
+          LEFT JOIN gw_salary_contract sc ON sc.contract_id = ec.salary_contract_id
+         WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(u.name) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(ec.contract_no) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+        <if test="status != null and status != ''">
+           AND ec.status_cd = #{status}
+        </if>
+         ORDER BY ec.created_at DESC
+         LIMIT 200
+    </select>
+
+    <select id="listByUser" resultMap="contractMap">
+        SELECT ec.*, u.name AS user_name, u.email, d.dept_nm, t.template_nm,
+               sc.annual_salary, sc.monthly_base_sal, sc.payment_day
+          FROM gw_employment_contract ec
+          JOIN gw_user u ON u.user_id = ec.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_contract_template t ON t.template_id = ec.template_id
+          LEFT JOIN gw_salary_contract sc ON sc.contract_id = ec.salary_contract_id
+         WHERE ec.user_id = #{userId}
+         ORDER BY ec.created_at DESC
+    </select>
+</mapper>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.doc.mapper.DocMapper">
+
+    <resultMap id="folderMap" type="egovframework.groupware.doc.service.DocFolderVO">
+        <id property="folderId" column="folder_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="folderNm" column="folder_nm"/>
+        <result property="folderPath" column="folder_path"/>
+        <result property="accessScope" column="access_scope"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="fileMap" type="egovframework.groupware.doc.service.DocFileVO">
+        <id property="docId" column="doc_id"/>
+        <result property="folderId" column="folder_id"/>
+        <result property="folderNm" column="folder_nm"/>
+        <result property="attachId" column="attach_id"/>
+        <result property="fileNm" column="file_nm"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="mimeType" column="mime_type"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="downloadCnt" column="download_cnt"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="folderCols">
+        f.folder_id, f.parent_id, f.folder_nm, f.folder_path,
+        f.access_scope, f.dept_id, d.dept_nm,
+        f.owner_id, u.name AS owner_name,
+        f.description, f.created_at
+    </sql>
+
+    <sql id="folderAccessFilter">
+        (
+            f.access_scope = 'COMPANY'
+            OR (f.access_scope = 'DEPT' AND f.dept_id = #{deptId})
+            OR (f.access_scope = 'PRIVATE' AND f.owner_id = #{userId})
+        )
+    </sql>
+
+    <insert id="insertFolder" parameterType="egovframework.groupware.doc.service.DocFolderVO"
+            useGeneratedKeys="true" keyProperty="folderId" keyColumn="folder_id">
+        INSERT INTO gw_doc_folder
+            (parent_id, folder_nm, folder_path, access_scope, dept_id, owner_id, description)
+        VALUES (#{parentId}, #{folderNm}, #{folderPath},
+                COALESCE(#{accessScope},'COMPANY'),
+                #{deptId}, #{ownerId}, #{description})
+    </insert>
+
+    <update id="updateFolder">
+        UPDATE gw_doc_folder
+           SET folder_nm = #{folderNm}, description = #{description},
+               access_scope = #{accessScope}, dept_id = #{deptId}
+         WHERE folder_id = #{folderId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDeleteFolder">
+        UPDATE gw_doc_folder SET deleted_at = CURRENT_TIMESTAMP WHERE folder_id = #{folderId}
+    </update>
+
+    <select id="findFolder" resultMap="folderMap">
+        SELECT <include refid="folderCols"/>
+          FROM gw_doc_folder f
+          LEFT JOIN gw_user u ON u.user_id = f.owner_id
+          LEFT JOIN gw_dept d ON d.dept_id = f.dept_id
+         WHERE f.folder_id = #{folderId} AND f.deleted_at IS NULL
+    </select>
+
+    <select id="listAccessibleFolders" resultMap="folderMap">
+        SELECT <include refid="folderCols"/>
+          FROM gw_doc_folder f
+          LEFT JOIN gw_user u ON u.user_id = f.owner_id
+          LEFT JOIN gw_dept d ON d.dept_id = f.dept_id
+         WHERE f.deleted_at IS NULL AND <include refid="folderAccessFilter"/>
+         ORDER BY f.folder_nm
+    </select>
+
+    <insert id="insertFile" parameterType="egovframework.groupware.doc.service.DocFileVO"
+            useGeneratedKeys="true" keyProperty="docId" keyColumn="doc_id">
+        INSERT INTO gw_doc_file
+            (folder_id, attach_id, title, description, owner_id)
+        VALUES (#{folderId}, #{attachId}, #{title}, #{description}, #{ownerId})
+    </insert>
+
+    <update id="softDeleteFile">
+        UPDATE gw_doc_file SET deleted_at = CURRENT_TIMESTAMP WHERE doc_id = #{docId}
+    </update>
+
+    <update id="incrementDownload">
+        UPDATE gw_doc_file SET download_cnt = download_cnt + 1 WHERE doc_id = #{docId}
+    </update>
+
+    <sql id="fileCols">
+        df.doc_id, df.folder_id, f.folder_nm,
+        df.attach_id, a.file_nm, a.file_size, a.mime_type,
+        df.title, df.description,
+        df.owner_id, u.name AS owner_name,
+        df.download_cnt, df.created_at
+    </sql>
+
+    <select id="findFile" resultMap="fileMap">
+        SELECT <include refid="fileCols"/>
+          FROM gw_doc_file df
+          JOIN gw_doc_folder f ON f.folder_id = df.folder_id
+          JOIN gw_attach a ON a.attach_id = df.attach_id
+          LEFT JOIN gw_user u ON u.user_id = df.owner_id
+         WHERE df.doc_id = #{docId} AND df.deleted_at IS NULL
+    </select>
+
+    <select id="listFiles" resultMap="fileMap">
+        SELECT <include refid="fileCols"/>
+          FROM gw_doc_file df
+          JOIN gw_doc_folder f ON f.folder_id = df.folder_id
+          JOIN gw_attach a ON a.attach_id = df.attach_id
+          LEFT JOIN gw_user u ON u.user_id = df.owner_id
+         WHERE df.deleted_at IS NULL AND df.folder_id = #{folderId}
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(df.title) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(a.file_nm) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(df.description) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+         ORDER BY df.created_at DESC
+    </select>
+
+    <select id="searchAll" resultMap="fileMap">
+        SELECT <include refid="fileCols"/>
+          FROM gw_doc_file df
+          JOIN gw_doc_folder f ON f.folder_id = df.folder_id
+          JOIN gw_attach a ON a.attach_id = df.attach_id
+          LEFT JOIN gw_user u ON u.user_id = df.owner_id
+         WHERE df.deleted_at IS NULL AND f.deleted_at IS NULL
+           AND <include refid="folderAccessFilter"/>
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(df.title) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(a.file_nm) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+         ORDER BY df.created_at DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="countAccessibleFiles" resultType="long">
+        SELECT COUNT(*) FROM gw_doc_file df
+          JOIN gw_doc_folder f ON f.folder_id = df.folder_id
+         WHERE df.deleted_at IS NULL AND f.deleted_at IS NULL
+           AND <include refid="folderAccessFilter"/>
+    </select>
+</mapper>

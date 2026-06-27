@@ -17,17 +17,8 @@
         <property name="poolName" value="groupware-pool"/>
     </bean>
 
-    <bean id="flyway" class="org.flywaydb.core.Flyway" init-method="migrate" depends-on="dataSource">
-        <constructor-arg>
-            <bean class="org.flywaydb.core.api.configuration.FluentConfiguration">
-                <property name="dataSource" ref="dataSource"/>
-                <property name="locationsAsStrings">
-                    <array>
-                        <value>${flyway.locations:classpath:db/migration}</value>
-                    </array>
-                </property>
-                <property name="baselineOnMigrate" value="true"/>
-            </bean>
-        </constructor-arg>
+    <bean id="flyway" class="egovframework.groupware.cmm.db.FlywayInitializer" init-method="migrate">
+        <constructor-arg ref="dataSource"/>
+        <constructor-arg value="${flyway.locations:classpath:db/migration}"/>
     </bean>
 </beans>

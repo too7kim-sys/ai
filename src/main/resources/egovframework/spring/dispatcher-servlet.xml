@@ -11,12 +11,14 @@
             http://www.springframework.org/schema/mvc
             http://www.springframework.org/schema/mvc/spring-mvc.xsd">
 
-    <context:component-scan base-package="egovframework.groupware">
+    <context:component-scan base-package="egovframework.groupware" use-default-filters="false">
         <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
         <context:include-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
     </context:component-scan>
 
-    <mvc:annotation-driven>
+    <!-- mvc:annotation-driven 이 자체적으로 DefaultFormattingConversionService 를 생성하므로
+         conversion-service 속성을 명시하지 않는다 (그래야 JSR-310 ISO 포맷이 자동 등록됨) -->
+    <mvc:annotation-driven ignore-default-model-on-redirect="true">
         <mvc:message-converters register-defaults="true">
             <bean class="org.springframework.http.converter.StringHttpMessageConverter">
                 <constructor-arg value="UTF-8"/>
@@ -27,14 +29,23 @@
                 </property>
             </bean>
         </mvc:message-converters>
+        <mvc:argument-resolvers>
+            <bean class="org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver"/>
+        </mvc:argument-resolvers>
     </mvc:annotation-driven>
 
+    <!--
+        정적 리소스는 Tomcat 기본 DefaultServlet 이 처리하도록 위임한다.
+        (mvc:resources 는 Spring 의 ResourceHttpRequestHandler 를 거쳐
+         HttpServletResponse#setContentLengthLong(long) 을 호출하는데,
+         이 메서드는 Tomcat 7(Servlet 3.0) 에 없어 NoSuchMethodError 가 발생한다.)
+    -->
     <mvc:default-servlet-handler/>
 
-    <mvc:resources mapping="/css/**" location="/css/"/>
-    <mvc:resources mapping="/js/**" location="/js/"/>
-    <mvc:resources mapping="/images/**" location="/images/"/>
-    <mvc:resources mapping="/webjars/**" location="/webjars/"/>
+    <!-- PRG(POST→redirect) 응답에 작업 결과 토스트 메시지를 자동 부여 -->
+    <mvc:interceptors>
+        <bean class="egovframework.groupware.cmm.web.FlashMessageInterceptor"/>
+    </mvc:interceptors>
 
     <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="prefix" value="/WEB-INF/jsp/"/>

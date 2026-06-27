@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.calendar.mapper.CalendarMapper">
+
+    <resultMap id="evtMap" type="egovframework.groupware.calendar.service.CalEventVO">
+        <id property="evtId" column="evt_id"/>
+        <result property="title" column="title"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="scopeCd" column="scope_cd"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="color" column="color"/>
+        <result property="memo" column="memo"/>
+        <result property="repeatGroupId" column="repeat_group_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="evtCols">
+        e.evt_id, e.title, e.start_dt, e.end_dt, e.scope_cd,
+        e.owner_id, u.name AS owner_name,
+        e.dept_id, d.dept_nm,
+        e.color, e.memo, e.repeat_group_id, e.created_at
+    </sql>
+
+    <insert id="insert" parameterType="egovframework.groupware.calendar.service.CalEventVO"
+            useGeneratedKeys="true" keyProperty="evtId" keyColumn="evt_id">
+        INSERT INTO gw_cal_event (title, start_dt, end_dt, scope_cd,
+                                  owner_id, dept_id, color, memo, repeat_group_id, created_by)
+        VALUES (#{title}, #{startDt}, #{endDt}, COALESCE(#{scopeCd},'PERSONAL'),
+                #{ownerId}, #{deptId}, #{color}, #{memo}, #{repeatGroupId}, #{ownerId})
+    </insert>
+
+    <update id="update">
+        UPDATE gw_cal_event
+           SET title = #{title}, start_dt = #{startDt}, end_dt = #{endDt},
+               scope_cd = #{scopeCd}, dept_id = #{deptId},
+               color = #{color}, memo = #{memo},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE evt_id = #{evtId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDelete">
+        UPDATE gw_cal_event SET deleted_at = CURRENT_TIMESTAMP
+         WHERE evt_id = #{evtId}
+           AND (owner_id = #{userId} OR scope_cd = 'COMPANY')
+    </update>
+
+    <update id="softDeleteSeries">
+        UPDATE gw_cal_event SET deleted_at = CURRENT_TIMESTAMP
+         WHERE repeat_group_id = #{repeatGroupId}
+           AND deleted_at IS NULL
+           AND (owner_id = #{userId} OR scope_cd = 'COMPANY')
+    </update>
+
+    <select id="findById" resultMap="evtMap">
+        SELECT <include refid="evtCols"/>
+          FROM gw_cal_event e
+          LEFT JOIN gw_user u ON u.user_id = e.owner_id
+          LEFT JOIN gw_dept d ON d.dept_id = e.dept_id
+         WHERE e.evt_id = #{evtId} AND e.deleted_at IS NULL
+    </select>
+
+    <select id="listByRange" resultMap="evtMap">
+        SELECT <include refid="evtCols"/>
+          FROM gw_cal_event e
+          LEFT JOIN gw_user u ON u.user_id = e.owner_id
+          LEFT JOIN gw_dept d ON d.dept_id = e.dept_id
+         WHERE e.deleted_at IS NULL
+           AND e.end_dt >= #{from} AND e.start_dt &lt;= #{to}
+           AND ( e.scope_cd = 'COMPANY'
+                 OR (e.scope_cd = 'DEPT' AND e.dept_id = #{deptId})
+                 OR (e.scope_cd = 'PERSONAL' AND e.owner_id = #{userId})
+           )
+         ORDER BY e.start_dt
+    </select>
+
+    <select id="countToday" resultType="long">
+        SELECT COUNT(*) FROM gw_cal_event e
+         WHERE e.deleted_at IS NULL
+           AND e.end_dt >= #{from} AND e.start_dt &lt;= #{to}
+           AND ( e.scope_cd = 'COMPANY'
+                 OR (e.scope_cd = 'DEPT' AND e.dept_id = #{deptId})
+                 OR (e.scope_cd = 'PERSONAL' AND e.owner_id = #{userId})
+           )
+    </select>
+</mapper>

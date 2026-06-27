@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.payroll.mapper.PayrollMapper">
+
+    <resultMap id="rateMap" type="egovframework.groupware.payroll.service.InsuranceRateVO">
+        <id property="rateId" column="rate_id"/>
+        <result property="insuranceCd" column="insurance_cd"/>
+        <result property="effectiveFrom" column="effective_from"/>
+        <result property="effectiveTo" column="effective_to"/>
+        <result property="employeeRate" column="employee_rate"/>
+        <result property="employerRate" column="employer_rate"/>
+        <result property="baseMin" column="base_min"/>
+        <result property="baseMax" column="base_max"/>
+        <result property="note" column="note"/>
+    </resultMap>
+
+    <resultMap id="contractMap" type="egovframework.groupware.payroll.service.SalaryContractVO">
+        <id property="contractId" column="contract_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="annualSalary" column="annual_salary"/>
+        <result property="monthlyBaseSal" column="monthly_base_sal"/>
+        <result property="divisionTypeCd" column="division_type_cd"/>
+        <result property="paymentDay" column="payment_day"/>
+        <result property="note" column="note"/>
+    </resultMap>
+
+    <resultMap id="payrollMap" type="egovframework.groupware.payroll.service.PayrollVO">
+        <id property="payId" column="pay_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="email" column="email"/>
+        <result property="bankCd" column="bank_cd"/>
+        <result property="bankAccount" column="bank_account"/>
+        <result property="payMonth" column="pay_month"/>
+        <result property="contractId" column="contract_id"/>
+        <result property="workDays" column="work_days"/>
+        <result property="absentDays" column="absent_days"/>
+        <result property="otMin" column="ot_min"/>
+        <result property="nightMin" column="night_min"/>
+        <result property="holidayMin" column="holiday_min"/>
+        <result property="taxablePay" column="taxable_pay"/>
+        <result property="nonTaxablePay" column="non_taxable_pay"/>
+        <result property="grossPay" column="gross_pay"/>
+        <result property="deductionTotal" column="deduction_total"/>
+        <result property="netPay" column="net_pay"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="paidDt" column="paid_dt"/>
+        <result property="memo" column="memo"/>
+    </resultMap>
+
+    <resultMap id="itemMap" type="egovframework.groupware.payroll.service.PayrollItemVO">
+        <id property="itemId" column="item_id"/>
+        <result property="payId" column="pay_id"/>
+        <result property="kindCd" column="kind_cd"/>
+        <result property="codeVal" column="code_val"/>
+        <result property="itemNm" column="item_nm"/>
+        <result property="amount" column="amount"/>
+        <result property="taxableYn" column="taxable_yn"/>
+        <result property="autoYn" column="auto_yn"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="memo" column="memo"/>
+    </resultMap>
+
+    <resultMap id="employerCostMap" type="egovframework.groupware.payroll.service.PayrollEmployerCostVO">
+        <result property="payId" column="pay_id"/>
+        <result property="insuranceCd" column="insurance_cd"/>
+        <result property="amount" column="amount"/>
+    </resultMap>
+
+    <resultMap id="taxBracketMap" type="egovframework.groupware.payroll.service.IncomeTaxBracketVO">
+        <id property="bracketId" column="bracket_id"/>
+        <result property="effectiveFrom" column="effective_from"/>
+        <result property="effectiveTo" column="effective_to"/>
+        <result property="minTaxable" column="min_taxable"/>
+        <result property="maxTaxable" column="max_taxable"/>
+        <result property="baseTax" column="base_tax"/>
+        <result property="progressiveRate" column="progressive_rate"/>
+        <result property="dependentDeduction" column="dependent_deduction"/>
+        <result property="childDeduction" column="child_deduction"/>
+        <result property="note" column="note"/>
+    </resultMap>
+
+    <select id="findActiveRates" resultMap="rateMap">
+        SELECT * FROM gw_insurance_rate
+         WHERE effective_from &lt;= #{on}
+           AND (effective_to IS NULL OR effective_to &gt; #{on})
+         ORDER BY insurance_cd
+    </select>
+
+    <select id="findActiveTaxBrackets" resultMap="taxBracketMap">
+        SELECT * FROM gw_income_tax_bracket
+         WHERE effective_from &lt;= #{on}
+           AND (effective_to IS NULL OR effective_to &gt; #{on})
+         ORDER BY min_taxable
+    </select>
+
+    <!-- 요율 관리 화면용 — 미래 등록분 포함 전 행. -->
+    <select id="listAllRates" resultMap="rateMap">
+        SELECT * FROM gw_insurance_rate
+         ORDER BY effective_from DESC, insurance_cd
+    </select>
+
+    <select id="findRate" resultMap="rateMap">
+        SELECT * FROM gw_insurance_rate WHERE rate_id = #{rateId}
+    </select>
+
+    <insert id="insertRate" parameterType="egovframework.groupware.payroll.service.InsuranceRateVO"
+            useGeneratedKeys="true" keyProperty="rateId" keyColumn="rate_id">
+        INSERT INTO gw_insurance_rate
+          (insurance_cd, effective_from, effective_to, employee_rate, employer_rate,
+           base_min, base_max, note)
+        VALUES
+          (#{insuranceCd}, #{effectiveFrom}, #{effectiveTo}, #{employeeRate}, #{employerRate},
+           #{baseMin}, #{baseMax}, #{note})
+    </insert>
+
+    <update id="updateRate">
+        UPDATE gw_insurance_rate
+           SET insurance_cd = #{insuranceCd},
+               effective_from = #{effectiveFrom},
+               effective_to = #{effectiveTo},
+               employee_rate = #{employeeRate},
+               employer_rate = #{employerRate},
+               base_min = #{baseMin},
+               base_max = #{baseMax},
+               note = #{note}
+         WHERE rate_id = #{rateId}
+    </update>
+
+    <delete id="deleteRate">
+        DELETE FROM gw_insurance_rate WHERE rate_id = #{rateId}
+    </delete>
+
+    <!-- 부양가족 자동 카운트 — gw_family 의 dependent_yn='Y' 행 수.
+         본인(+1) 가산은 서비스 레이어에서 수행. -->
+    <select id="countDependents" resultType="int">
+        SELECT COUNT(*) FROM gw_family
+         WHERE user_id = #{userId} AND dependent_yn = 'Y'
+    </select>
+
+    <!-- 만 20세 이하 자녀 수 — cutoff(=급여월 1일 - 20년) 이후 출생.
+         INTERVAL 문법 대신 LocalDate 를 자바에서 계산해 넘긴다(H2/PG 호환). -->
+    <select id="countChildrenUnder20" resultType="int">
+        SELECT COUNT(*) FROM gw_family
+         WHERE user_id = #{userId}
+           AND relation_cd = 'CHILD'
+           AND birth_dt IS NOT NULL
+           AND birth_dt &gt;= #{cutoff}
+    </select>
+
+    <select id="findCurrentContract" resultMap="contractMap">
+        SELECT sc.*, u.name AS user_name
+          FROM gw_salary_contract sc
+          JOIN gw_user u ON u.user_id = sc.user_id
+         WHERE sc.user_id = #{userId}
+           AND sc.start_dt &lt;= #{on}
+           AND (sc.end_dt IS NULL OR sc.end_dt &gt;= #{on})
+         ORDER BY sc.start_dt DESC
+         LIMIT 1
+    </select>
+
+    <insert id="insertContract" parameterType="egovframework.groupware.payroll.service.SalaryContractVO"
+            useGeneratedKeys="true" keyProperty="contractId" keyColumn="contract_id">
+        INSERT INTO gw_salary_contract (user_id, start_dt, end_dt, annual_salary, monthly_base_sal,
+                                        division_type_cd, payment_day, note)
+        VALUES (#{userId}, #{startDt}, #{endDt}, #{annualSalary}, #{monthlyBaseSal},
+                COALESCE(#{divisionTypeCd}, '12'),
+                COALESCE(#{paymentDay}, 25), #{note})
+    </insert>
+
+    <select id="listContracts" resultMap="contractMap">
+        SELECT sc.*, u.name AS user_name
+          FROM gw_salary_contract sc
+          JOIN gw_user u ON u.user_id = sc.user_id
+         WHERE (#{userId} IS NULL OR sc.user_id = #{userId})
+         ORDER BY sc.start_dt DESC
+    </select>
+
+    <select id="findActiveUserIds" resultType="long">
+        SELECT user_id FROM gw_user WHERE use_yn = 'Y' AND deleted_at IS NULL ORDER BY user_id
+    </select>
+
+    <!-- 급여 생성 대상자(자기 자신 + 퇴사일) — 일할 계산을 위해 resign_date 함께 조회.
+         resign_date < 급여월 첫날 인 사용자는 SQL 단계에서 제외. -->
+    <select id="findPayrollEligibleUsers" resultType="map">
+        SELECT u.user_id AS "userId",
+               u.hire_date AS "hireDate",
+               u.resign_date AS "resignDate"
+          FROM gw_user u
+         WHERE u.use_yn = 'Y' AND u.deleted_at IS NULL
+           AND (u.resign_date IS NULL OR u.resign_date &gt;= #{firstOfMonth})
+         ORDER BY u.user_id
+    </select>
+
+    <!-- 단일 사용자 입사/퇴사일 조회 — recalculate 시 일할 base 재계산에 사용. -->
+    <select id="findUserHireResign" resultType="map">
+        SELECT hire_date AS "hireDate",
+               resign_date AS "resignDate"
+          FROM gw_user
+         WHERE user_id = #{userId}
+    </select>
+
+    <select id="findPayroll" resultMap="payrollMap">
+        SELECT p.*, u.name AS user_name, d.dept_nm, u.email
+          FROM gw_payroll p
+          JOIN gw_user u ON u.user_id = p.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.pay_id = #{payId}
+    </select>
+
+    <select id="findByUserAndMonth" resultMap="payrollMap">
+        SELECT p.*, u.name AS user_name, d.dept_nm, u.email
+          FROM gw_payroll p
+          JOIN gw_user u ON u.user_id = p.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.user_id = #{userId} AND p.pay_month = #{payMonth}
+    </select>
+
+    <select id="listPayrolls" resultMap="payrollMap">
+        SELECT p.*, u.name AS user_name, d.dept_nm, u.email,
+               u.bank_cd, u.bank_account
+          FROM gw_payroll p
+          JOIN gw_user u ON u.user_id = p.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.pay_month = #{payMonth}
+        <if test="status != null and status != ''">
+           AND p.status_cd = #{status}
+        </if>
+         ORDER BY d.dept_nm, u.name
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPayrolls" resultType="long">
+        SELECT COUNT(*) FROM gw_payroll p
+         WHERE p.pay_month = #{payMonth}
+        <if test="status != null and status != ''">
+           AND p.status_cd = #{status}
+        </if>
+    </select>
+
+    <select id="listMyPayrolls" resultMap="payrollMap">
+        SELECT p.*, u.name AS user_name, d.dept_nm, u.email
+          FROM gw_payroll p
+          JOIN gw_user u ON u.user_id = p.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.user_id = #{userId}
+           AND p.status_cd IN ('CONFIRMED','PAID')
+         ORDER BY p.pay_month DESC
+    </select>
+
+    <insert id="insertPayroll" parameterType="egovframework.groupware.payroll.service.PayrollVO"
+            useGeneratedKeys="true" keyProperty="payId" keyColumn="pay_id">
+        INSERT INTO gw_payroll (user_id, pay_month, contract_id,
+                                work_days, absent_days, ot_min, night_min, holiday_min,
+                                taxable_pay, non_taxable_pay, gross_pay,
+                                deduction_total, net_pay, status_cd, paid_dt, memo)
+        VALUES (#{userId}, #{payMonth}, #{contractId},
+                COALESCE(#{workDays}, 0), COALESCE(#{absentDays}, 0),
+                COALESCE(#{otMin}, 0), COALESCE(#{nightMin}, 0), COALESCE(#{holidayMin}, 0),
+                COALESCE(#{taxablePay}, 0), COALESCE(#{nonTaxablePay}, 0), COALESCE(#{grossPay}, 0),
+                COALESCE(#{deductionTotal}, 0), COALESCE(#{netPay}, 0),
+                COALESCE(#{statusCd}, 'DRAFT'), #{paidDt}, #{memo})
+    </insert>
+
+    <update id="updatePayroll" parameterType="egovframework.groupware.payroll.service.PayrollVO">
+        UPDATE gw_payroll
+           SET contract_id = #{contractId},
+               work_days = COALESCE(#{workDays}, 0),
+               absent_days = COALESCE(#{absentDays}, 0),
+               ot_min = COALESCE(#{otMin}, 0),
+               night_min = COALESCE(#{nightMin}, 0),
+               holiday_min = COALESCE(#{holidayMin}, 0),
+               taxable_pay = COALESCE(#{taxablePay}, 0),
+               non_taxable_pay = COALESCE(#{nonTaxablePay}, 0),
+               gross_pay = COALESCE(#{grossPay}, 0),
+               deduction_total = COALESCE(#{deductionTotal}, 0),
+               net_pay = COALESCE(#{netPay}, 0),
+               status_cd = #{statusCd},
+               paid_dt = #{paidDt},
+               memo = #{memo},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE pay_id = #{payId}
+    </update>
+
+    <delete id="deleteItems">DELETE FROM gw_payroll_item WHERE pay_id = #{payId}</delete>
+
+    <insert id="insertItem" parameterType="egovframework.groupware.payroll.service.PayrollItemVO">
+        INSERT INTO gw_payroll_item (pay_id, kind_cd, code_val, item_nm, amount,
+                                     taxable_yn, auto_yn, sort_no, memo)
+        VALUES (#{payId}, #{kindCd}, #{codeVal}, #{itemNm}, #{amount},
+                COALESCE(#{taxableYn}, 'Y'), COALESCE(#{autoYn}, 'Y'),
+                COALESCE(#{sortNo}, 0), #{memo})
+    </insert>
+
+    <select id="findItems" resultMap="itemMap">
+        SELECT * FROM gw_payroll_item WHERE pay_id = #{payId} ORDER BY kind_cd, sort_no
+    </select>
+
+    <delete id="deleteEmployerCosts">DELETE FROM gw_payroll_employer_cost WHERE pay_id = #{payId}</delete>
+
+    <insert id="insertEmployerCost" parameterType="egovframework.groupware.payroll.service.PayrollEmployerCostVO">
+        INSERT INTO gw_payroll_employer_cost (pay_id, insurance_cd, amount)
+        VALUES (#{payId}, #{insuranceCd}, COALESCE(#{amount}, 0))
+    </insert>
+
+    <select id="findEmployerCosts" resultMap="employerCostMap">
+        SELECT * FROM gw_payroll_employer_cost WHERE pay_id = #{payId} ORDER BY insurance_cd
+    </select>
+
+    <update id="updateStatus">
+        UPDATE gw_payroll
+           SET status_cd = #{statusCd},
+               paid_dt = #{paidDt},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE pay_id = #{payId}
+    </update>
+
+    <!-- 근태 자동 집계 (급여 산정 시 연장/야간/휴일·근무일·결근일·휴가일 자동 반영).
+         work_days 는 휴일근로(HOLIDAY)·결근(ABSENT)·휴가(LEAVE) 를 모두 제외:
+         - 휴일근로 시간은 holiday_min 으로 별도 가산되어 근무일 카운트에 중복으로 잡히지 않도록,
+         - 결근일은 absent_days 로 별도 카운트되어 공제 대상이므로 분리,
+         - 휴가일은 휴가 잔여에서 별도 차감되므로 근무일에서 분리. -->
+    <select id="sumAttendance" resultType="map">
+        SELECT
+            COALESCE(SUM(ot_min), 0)     AS ot_min,
+            COALESCE(SUM(night_min), 0)  AS night_min,
+            COALESCE(SUM(holiday_min), 0) AS holiday_min,
+            COALESCE(SUM(CASE WHEN status_cd NOT IN ('HOLIDAY','ABSENT','LEAVE') THEN 1 ELSE 0 END), 0) AS work_days,
+            COALESCE(SUM(CASE WHEN status_cd = 'ABSENT' THEN 1 ELSE 0 END), 0) AS absent_days
+          FROM gw_attendance
+         WHERE user_id = #{userId}
+           AND work_dt BETWEEN #{from} AND #{to}
+    </select>
+
+    <!-- 부서별 인건비 통계 -->
+    <select id="sumByDept" resultType="map">
+        SELECT d.dept_nm AS dept_nm,
+               COUNT(*)                       AS cnt,
+               COALESCE(SUM(p.gross_pay), 0)      AS gross_total,
+               COALESCE(SUM(p.deduction_total), 0) AS deduction_total,
+               COALESCE(SUM(p.net_pay), 0)        AS net_total
+          FROM gw_payroll p
+          JOIN gw_user u ON u.user_id = p.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.pay_month = #{payMonth}
+         GROUP BY d.dept_nm
+         ORDER BY net_total DESC
+    </select>
+</mapper>

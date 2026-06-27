@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.payroll.mapper.BonusMapper">
+
+    <resultMap id="bonusMap" type="egovframework.groupware.payroll.service.BonusVO">
+        <id property="bonusId" column="bonus_id"/>
+        <result property="payMonth" column="pay_month"/>
+        <result property="bonusTypeCd" column="bonus_type_cd"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="amount" column="amount"/>
+        <result property="taxableYn" column="taxable_yn"/>
+        <result property="memo" column="memo"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="createdBy" column="created_by"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="egovframework.groupware.payroll.service.BonusVO"
+            useGeneratedKeys="true" keyProperty="bonusId" keyColumn="bonus_id">
+        INSERT INTO gw_payroll_bonus
+            (pay_month, bonus_type_cd, user_id, amount, taxable_yn, memo, status_cd, created_by)
+        VALUES (#{payMonth}, #{bonusTypeCd}, #{userId}, COALESCE(#{amount},0),
+                COALESCE(#{taxableYn},'Y'), #{memo}, COALESCE(#{statusCd},'PLANNED'), #{createdBy})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM gw_payroll_bonus WHERE bonus_id = #{bonusId} AND status_cd = 'PLANNED'
+    </delete>
+
+    <update id="updateStatus">
+        UPDATE gw_payroll_bonus SET status_cd = #{statusCd} WHERE bonus_id = #{bonusId}
+    </update>
+
+    <select id="findById" resultMap="bonusMap">
+        SELECT b.*, u.name AS user_name, d.dept_nm
+          FROM gw_payroll_bonus b
+          JOIN gw_user u ON u.user_id = b.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE b.bonus_id = #{bonusId}
+    </select>
+
+    <select id="search" resultMap="bonusMap">
+        SELECT b.*, u.name AS user_name, d.dept_nm
+          FROM gw_payroll_bonus b
+          JOIN gw_user u ON u.user_id = b.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE 1=1
+        <if test="payMonth != null and payMonth != ''">AND b.pay_month = #{payMonth}</if>
+        <if test="bonusTypeCd != null and bonusTypeCd != ''">AND b.bonus_type_cd = #{bonusTypeCd}</if>
+         ORDER BY b.pay_month DESC, d.dept_nm, u.name
+    </select>
+
+    <select id="findPlannedByUserMonth" resultMap="bonusMap">
+        SELECT * FROM gw_payroll_bonus
+         WHERE user_id = #{userId} AND pay_month = #{payMonth}
+           AND status_cd = 'PLANNED'
+         ORDER BY bonus_id
+    </select>
+
+    <update id="markApplied">
+        UPDATE gw_payroll_bonus SET status_cd = 'APPLIED'
+         WHERE user_id = #{userId} AND pay_month = #{payMonth} AND status_cd = 'PLANNED'
+    </update>
+</mapper>

@@ -1,0 +1,72 @@
+package egovframework.groupware.notification.web;
+
+import egovframework.groupware.auth.security.CustomUserDetails;
+import egovframework.groupware.notification.service.NotificationService;
+import egovframework.groupware.notification.service.NotificationVO;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Controller
+public class NotificationController {
+
+    private final NotificationService service;
+
+    public NotificationController(NotificationService service) { this.service = service; }
+
+    @GetMapping("/notification/list.do")
+    public String list(@AuthenticationPrincipal CustomUserDetails me,
+                       @RequestParam(required = false, defaultValue = "false") boolean onlyUnread,
+                       Model model) {
+        List<NotificationVO> all = service.findByUser(me.getUserId(), onlyUnread, 100);
+        model.addAttribute("list", all);
+        model.addAttribute("onlyUnread", onlyUnread);
+        model.addAttribute("unread", service.countUnread(me.getUserId()));
+        return "notification/list";
+    }
+
+    /**
+     * 토픽바 알림 폴링용 — 미읽음 수 + 최근 알림 목록.
+     * 화면(decorator.jsp)이 주기적으로 호출해 뱃지·드롭다운을 실시간 갱신한다.
+     */
+    @GetMapping("/notification/unread-count.do")
+    @ResponseBody
+    public Map<String, Object> unreadCount(@AuthenticationPrincipal CustomUserDetails me) {
+        Map<String, Object> out = new HashMap<>();
+        out.put("unread", service.countUnread(me.getUserId()));
+        List<Map<String, Object>> recent = new java.util.ArrayList<>();
+        for (NotificationVO n : service.findByUser(me.getUserId(), false, 6)) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("title", n.getTitle());
+            m.put("typeCd", n.getTypeCd());
+            m.put("linkUrl", n.getLinkUrl());
+            m.put("read", n.getReadAt() != null);
+            m.put("createdAt", n.getCreatedAt() == null ? "" : n.getCreatedAt().toString());
+            recent.add(m);
+        }
+        out.put("recent", recent);
+        return out;
+    }
+
+    @PostMapping("/notification/read.do")
+    public String read(@AuthenticationPrincipal CustomUserDetails me,
+                       @RequestParam Long notiId,
+                       @RequestParam(required = false) String redirect) {
+        service.markRead(notiId, me.getUserId());
+        return "redirect:" + (redirect == null || redirect.isBlank() ? "/notification/list.do" : redirect);
+    }
+
+    @PostMapping("/notification/read-all.do")
+    public String readAll(@AuthenticationPrincipal CustomUserDetails me) {
+        service.markAllRead(me.getUserId());
+        return "redirect:/notification/list.do";
+    }
+}

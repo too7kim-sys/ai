@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.vendor.mapper.VendorMapper">
+
+    <resultMap id="vendorMap" type="egovframework.groupware.vendor.service.VendorVO">
+        <id property="vendorId" column="vendor_id"/>
+        <result property="vendorTypeCd" column="vendor_type_cd"/>
+        <result property="bizNo" column="biz_no"/>
+        <result property="companyNm" column="company_nm"/>
+        <result property="ceoNm" column="ceo_nm"/>
+        <result property="bizKind" column="biz_kind"/>
+        <result property="bizItem" column="biz_item"/>
+        <result property="address" column="address"/>
+        <result property="zipcode" column="zipcode"/>
+        <result property="contactNm" column="contact_nm"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="contactEmail" column="contact_email"/>
+        <result property="bankCd" column="bank_cd"/>
+        <result property="bankAccount" column="bank_account"/>
+        <result property="bankHolder" column="bank_holder"/>
+        <result property="taxTypeCd" column="tax_type_cd"/>
+        <result property="memo" column="memo"/>
+        <result property="useYn" column="use_yn"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="egovframework.groupware.vendor.service.VendorVO"
+            useGeneratedKeys="true" keyProperty="vendorId" keyColumn="vendor_id">
+        INSERT INTO gw_vendor (vendor_type_cd, biz_no, company_nm, ceo_nm, biz_kind, biz_item,
+                               address, zipcode, contact_nm, contact_phone, contact_email,
+                               bank_cd, bank_account, bank_holder, tax_type_cd, memo, use_yn)
+        VALUES (#{vendorTypeCd}, #{bizNo}, #{companyNm}, #{ceoNm}, #{bizKind}, #{bizItem},
+                #{address}, #{zipcode}, #{contactNm}, #{contactPhone}, #{contactEmail},
+                #{bankCd}, #{bankAccount}, #{bankHolder}, COALESCE(#{taxTypeCd}, 'GENERAL'),
+                #{memo}, 'Y')
+    </insert>
+
+    <update id="update" parameterType="egovframework.groupware.vendor.service.VendorVO">
+        UPDATE gw_vendor
+           SET vendor_type_cd = #{vendorTypeCd}, company_nm = #{companyNm}, ceo_nm = #{ceoNm},
+               biz_kind = #{bizKind}, biz_item = #{bizItem}, address = #{address},
+               contact_nm = #{contactNm}, contact_phone = #{contactPhone}, contact_email = #{contactEmail},
+               bank_cd = #{bankCd}, bank_account = #{bankAccount}, bank_holder = #{bankHolder},
+               tax_type_cd = #{taxTypeCd}, memo = #{memo}, use_yn = #{useYn},
+               updated_at = CURRENT_TIMESTAMP
+         WHERE vendor_id = #{vendorId}
+    </update>
+
+    <select id="findById" resultMap="vendorMap">
+        SELECT * FROM gw_vendor WHERE vendor_id = #{vendorId}
+    </select>
+
+    <select id="findByBizNo" resultMap="vendorMap">
+        SELECT * FROM gw_vendor WHERE biz_no = #{bizNo}
+    </select>
+
+    <select id="list" resultMap="vendorMap">
+        SELECT * FROM gw_vendor
+         WHERE use_yn = 'Y' AND deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(company_nm) LIKE LOWER('%' || #{keyword} || '%')
+                OR biz_no LIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="type != null and type != ''">
+           AND (vendor_type_cd = #{type} OR vendor_type_cd = 'BOTH')
+        </if>
+         ORDER BY company_nm
+         LIMIT 200
+    </select>
+</mapper>

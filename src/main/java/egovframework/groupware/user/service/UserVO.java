@@ -22,6 +22,8 @@ public class UserVO extends BaseVO {
     private String roleCd;
     private String roleNm;
     private LocalDate hireDate;
+    private LocalDate resignDate;
+    private String resignReason;
     private String bankCd;
     private String bankAccount;
     private String useYn;

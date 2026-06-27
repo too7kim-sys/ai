@@ -30,7 +30,7 @@
         <slf4j.version>2.0.13</slf4j.version>
         <jackson.version>2.17.2</jackson.version>
         <jstl.version>1.2</jstl.version>
-        <sitemesh.version>3.2.2</sitemesh.version>
+        <sitemesh.version>3.0.1</sitemesh.version>
         <bcrypt.version>0.10.2</bcrypt.version>
         <poi.version>5.2.5</poi.version>
         <openpdf.version>2.0.3</openpdf.version>
@@ -38,7 +38,7 @@
         <commons-io.version>2.16.1</commons-io.version>
         <commons-fileupload.version>1.5</commons-fileupload.version>
         <jackson-databind.version>2.17.2</jackson-databind.version>
-        <jakarta-mail.version>2.0.1</jakarta-mail.version>
+        <jakarta-mail.version>1.6.2</jakarta-mail.version>
         <junit.version>5.10.2</junit.version>
         <assertj.version>3.25.3</assertj.version>
         <mockito.version>5.11.0</mockito.version>
@@ -184,7 +184,7 @@
         </dependency>
         <dependency>
             <groupId>com.sun.mail</groupId>
-            <artifactId>jakarta.mail</artifactId>
+            <artifactId>javax.mail</artifactId>
             <version>${jakarta-mail.version}</version>
         </dependency>
 
@@ -201,6 +201,11 @@
         </dependency>
 
         <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -383,6 +388,7 @@
                 <configuration>
                     <port>8080</port>
                     <path>/groupware</path>
+                    <uriEncoding>UTF-8</uriEncoding>
                 </configuration>
             </plugin>
         </plugins>

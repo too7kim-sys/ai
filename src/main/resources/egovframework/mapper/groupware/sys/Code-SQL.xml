@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.sys.mapper.CodeMapper">
+
+    <resultMap id="groupMap" type="egovframework.groupware.sys.service.CodeGroupVO">
+        <id property="groupCd" column="group_cd"/>
+        <result property="groupNm" column="group_nm"/>
+        <result property="description" column="description"/>
+        <result property="useYn" column="use_yn"/>
+    </resultMap>
+
+    <resultMap id="codeMap" type="egovframework.groupware.sys.service.CodeVO">
+        <id property="codeId" column="code_id"/>
+        <result property="groupCd" column="group_cd"/>
+        <result property="groupNm" column="group_nm"/>
+        <result property="codeVal" column="code_val"/>
+        <result property="codeNm" column="code_nm"/>
+        <result property="sortNo" column="sort_no"/>
+        <result property="useYn" column="use_yn"/>
+        <result property="extraVal" column="extra_val"/>
+    </resultMap>
+
+    <select id="listGroups" resultMap="groupMap">
+        SELECT * FROM gw_code_group ORDER BY group_cd
+    </select>
+
+    <select id="findGroup" resultMap="groupMap">
+        SELECT * FROM gw_code_group WHERE group_cd = #{groupCd}
+    </select>
+
+    <insert id="insertGroup">
+        INSERT INTO gw_code_group (group_cd, group_nm, description, use_yn)
+        VALUES (#{groupCd}, #{groupNm}, #{description}, COALESCE(#{useYn},'Y'))
+    </insert>
+
+    <update id="updateGroup">
+        UPDATE gw_code_group
+           SET group_nm = #{groupNm}, description = #{description}, use_yn = COALESCE(#{useYn}, use_yn)
+         WHERE group_cd = #{groupCd}
+    </update>
+
+    <delete id="deleteGroup">
+        DELETE FROM gw_code_group WHERE group_cd = #{groupCd}
+    </delete>
+
+    <select id="listCodes" resultMap="codeMap">
+        SELECT c.code_id, c.group_cd, g.group_nm, c.code_val, c.code_nm,
+               c.sort_no, c.use_yn, c.extra_val
+          FROM gw_code c
+          LEFT JOIN gw_code_group g ON g.group_cd = c.group_cd
+         WHERE c.group_cd = #{groupCd}
+         ORDER BY c.sort_no, c.code_val
+    </select>
+
+    <select id="findCode" resultMap="codeMap">
+        SELECT c.code_id, c.group_cd, g.group_nm, c.code_val, c.code_nm,
+               c.sort_no, c.use_yn, c.extra_val
+          FROM gw_code c
+          LEFT JOIN gw_code_group g ON g.group_cd = c.group_cd
+         WHERE c.code_id = #{codeId}
+    </select>
+
+    <insert id="insertCode" parameterType="egovframework.groupware.sys.service.CodeVO"
+            useGeneratedKeys="true" keyProperty="codeId" keyColumn="code_id">
+        INSERT INTO gw_code (group_cd, code_val, code_nm, sort_no, use_yn, extra_val)
+        VALUES (#{groupCd}, #{codeVal}, #{codeNm},
+                COALESCE(#{sortNo}, 0), COALESCE(#{useYn},'Y'), #{extraVal})
+    </insert>
+
+    <update id="updateCode">
+        UPDATE gw_code
+           SET code_val = #{codeVal}, code_nm = #{codeNm},
+               sort_no = COALESCE(#{sortNo}, sort_no),
+               use_yn = COALESCE(#{useYn}, use_yn),
+               extra_val = #{extraVal}
+         WHERE code_id = #{codeId}
+    </update>
+
+    <delete id="deleteCode">
+        DELETE FROM gw_code WHERE code_id = #{codeId}
+    </delete>
+</mapper>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.vehicle.mapper.VehicleMapper">
+
+    <resultMap id="vehicleMap" type="egovframework.groupware.vehicle.service.VehicleVO">
+        <id property="vehicleId" column="vehicle_id"/>
+        <result property="plateNo" column="plate_no"/>
+        <result property="modelNm" column="model_nm"/>
+        <result property="yearModel" column="year_model"/>
+        <result property="purchaseDt" column="purchase_dt"/>
+        <result property="fuelTypeCd" column="fuel_type_cd"/>
+        <result property="fuelEfficiency" column="fuel_efficiency"/>
+        <result property="seats" column="seats"/>
+        <result property="ownerDeptId" column="owner_dept_id"/>
+        <result property="ownerDeptNm" column="owner_dept_nm"/>
+        <result property="currentMileage" column="current_mileage"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="nextMaintenanceDt" column="next_maintenance_dt"/>
+        <result property="memo" column="memo"/>
+    </resultMap>
+
+    <resultMap id="resMap" type="egovframework.groupware.vehicle.service.VehicleReservationVO">
+        <id property="reservationId" column="reservation_id"/>
+        <result property="vehicleId" column="vehicle_id"/>
+        <result property="plateNo" column="plate_no"/>
+        <result property="modelNm" column="model_nm"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="purpose" column="purpose"/>
+        <result property="destination" column="destination"/>
+        <result property="passengerCnt" column="passenger_cnt"/>
+        <result property="mileageStart" column="mileage_start"/>
+        <result property="mileageEnd" column="mileage_end"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="vehicleCols">
+        v.vehicle_id, v.plate_no, v.model_nm, v.year_model, v.purchase_dt,
+        v.fuel_type_cd, v.fuel_efficiency, v.seats,
+        v.owner_dept_id, d.dept_nm AS owner_dept_nm,
+        v.current_mileage, v.status_cd, v.next_maintenance_dt, v.memo
+    </sql>
+
+    <insert id="insert" parameterType="egovframework.groupware.vehicle.service.VehicleVO"
+            useGeneratedKeys="true" keyProperty="vehicleId" keyColumn="vehicle_id">
+        INSERT INTO gw_vehicle
+            (plate_no, model_nm, year_model, purchase_dt, fuel_type_cd, fuel_efficiency,
+             seats, owner_dept_id, current_mileage, status_cd, next_maintenance_dt, memo)
+        VALUES (#{plateNo}, #{modelNm}, #{yearModel}, #{purchaseDt},
+                COALESCE(#{fuelTypeCd},'GASOLINE'), #{fuelEfficiency},
+                COALESCE(#{seats}, 5), #{ownerDeptId},
+                COALESCE(#{currentMileage}, 0),
+                COALESCE(#{statusCd},'AVAILABLE'),
+                #{nextMaintenanceDt}, #{memo})
+    </insert>
+
+    <update id="update">
+        UPDATE gw_vehicle
+           SET model_nm = #{modelNm}, year_model = #{yearModel}, purchase_dt = #{purchaseDt},
+               fuel_type_cd = #{fuelTypeCd}, fuel_efficiency = #{fuelEfficiency},
+               seats = #{seats}, owner_dept_id = #{ownerDeptId},
+               current_mileage = #{currentMileage},
+               next_maintenance_dt = #{nextMaintenanceDt}, memo = #{memo}
+         WHERE vehicle_id = #{vehicleId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDelete">
+        UPDATE gw_vehicle SET deleted_at = CURRENT_TIMESTAMP WHERE vehicle_id = #{vehicleId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE gw_vehicle SET status_cd = #{statusCd} WHERE vehicle_id = #{vehicleId}
+    </update>
+
+    <update id="updateMileage">
+        UPDATE gw_vehicle
+           SET current_mileage = #{mileage}
+         WHERE vehicle_id = #{vehicleId}
+           AND current_mileage &lt; #{mileage}
+    </update>
+
+    <select id="findById" resultMap="vehicleMap">
+        SELECT <include refid="vehicleCols"/>
+          FROM gw_vehicle v
+          LEFT JOIN gw_dept d ON d.dept_id = v.owner_dept_id
+         WHERE v.vehicle_id = #{vehicleId} AND v.deleted_at IS NULL
+    </select>
+
+    <select id="findAll" resultMap="vehicleMap">
+        SELECT <include refid="vehicleCols"/>
+          FROM gw_vehicle v
+          LEFT JOIN gw_dept d ON d.dept_id = v.owner_dept_id
+         WHERE v.deleted_at IS NULL
+         ORDER BY v.status_cd, v.plate_no
+    </select>
+
+    <select id="findAvailable" resultMap="vehicleMap">
+        SELECT <include refid="vehicleCols"/>
+          FROM gw_vehicle v
+          LEFT JOIN gw_dept d ON d.dept_id = v.owner_dept_id
+         WHERE v.deleted_at IS NULL AND v.status_cd IN ('AVAILABLE','IN_USE')
+         ORDER BY v.plate_no
+    </select>
+
+    <sql id="resCols">
+        r.reservation_id, r.vehicle_id, vh.plate_no, vh.model_nm,
+        r.user_id, u.name AS user_name,
+        r.start_dt, r.end_dt, r.purpose, r.destination, r.passenger_cnt,
+        r.mileage_start, r.mileage_end, r.status_cd, r.created_at
+    </sql>
+
+    <insert id="insertReservation" parameterType="egovframework.groupware.vehicle.service.VehicleReservationVO"
+            useGeneratedKeys="true" keyProperty="reservationId" keyColumn="reservation_id">
+        INSERT INTO gw_vehicle_reservation
+            (vehicle_id, user_id, start_dt, end_dt, purpose, destination,
+             passenger_cnt, mileage_start, status_cd)
+        VALUES (#{vehicleId}, #{userId}, #{startDt}, #{endDt}, #{purpose}, #{destination},
+                COALESCE(#{passengerCnt}, 1), #{mileageStart},
+                COALESCE(#{statusCd}, 'APPROVED'))
+    </insert>
+
+    <update id="softDeleteReservation">
+        UPDATE gw_vehicle_reservation
+           SET deleted_at = CURRENT_TIMESTAMP, status_cd = 'CANCELED'
+         WHERE reservation_id = #{reservationId}
+           AND (user_id = #{userId} OR #{roleCd} IN ('ADMIN','HR_MANAGER'))
+    </update>
+
+    <update id="updateReservationStatus">
+        UPDATE gw_vehicle_reservation SET status_cd = #{statusCd}
+         WHERE reservation_id = #{reservationId}
+    </update>
+
+    <update id="completeReservation">
+        UPDATE gw_vehicle_reservation
+           SET status_cd = 'COMPLETED', mileage_end = #{mileageEnd}
+         WHERE reservation_id = #{reservationId}
+    </update>
+
+    <select id="findReservation" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_vehicle_reservation r
+          JOIN gw_vehicle vh ON vh.vehicle_id = r.vehicle_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.reservation_id = #{reservationId}
+    </select>
+
+    <select id="countOverlap" resultType="long">
+        SELECT COUNT(*) FROM gw_vehicle_reservation
+         WHERE deleted_at IS NULL
+           AND status_cd IN ('PENDING','APPROVED','IN_USE')
+           AND vehicle_id = #{vehicleId}
+           AND end_dt &gt; #{start} AND start_dt &lt; #{end}
+        <if test="excludeId != null">AND reservation_id &lt;&gt; #{excludeId}</if>
+    </select>
+
+    <select id="listByDay" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_vehicle_reservation r
+          JOIN gw_vehicle vh ON vh.vehicle_id = r.vehicle_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.deleted_at IS NULL
+           AND r.vehicle_id = #{vehicleId}
+           AND r.start_dt &lt; #{to}
+           AND r.end_dt   > #{from}
+         ORDER BY r.start_dt
+    </select>
+
+    <select id="listByUser" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_vehicle_reservation r
+          JOIN gw_vehicle vh ON vh.vehicle_id = r.vehicle_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.deleted_at IS NULL AND r.user_id = #{userId}
+         ORDER BY r.start_dt DESC LIMIT 100
+    </select>
+
+    <select id="listAllUpcoming" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_vehicle_reservation r
+          JOIN gw_vehicle vh ON vh.vehicle_id = r.vehicle_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.deleted_at IS NULL
+           AND r.end_dt &gt;= CURRENT_TIMESTAMP
+         ORDER BY r.start_dt LIMIT #{limit}
+    </select>
+</mapper>

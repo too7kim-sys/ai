@@ -16,6 +16,8 @@
         <result property="roleCd" column="role_cd"/>
         <result property="roleNm" column="role_nm"/>
         <result property="hireDate" column="hire_date"/>
+        <result property="resignDate" column="resign_date"/>
+        <result property="resignReason" column="resign_reason"/>
         <result property="bankCd" column="bank_cd"/>
         <result property="bankAccount" column="bank_account"/>
         <result property="useYn" column="use_yn"/>
@@ -29,20 +31,27 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <!-- 일반 조회용 컬럼 집합 — 비밀번호 해시는 메모리 노출 최소화를 위해 제외.
+         로그인(findByEmail) 흐름만 별도 fragment userColumnsForAuth 를 사용한다. -->
     <sql id="userColumns">
-        u.user_id, u.email, u.password_hash, u.name, u.phone,
+        u.user_id, u.email, u.name, u.phone,
         u.dept_id, d.dept_nm,
         u.position_id, p.position_nm,
         u.role_cd, r.role_nm,
-        u.hire_date, u.bank_cd, u.bank_account, u.use_yn,
+        u.hire_date, u.resign_date, u.resign_reason,
+        u.bank_cd, u.bank_account, u.use_yn,
         u.pwd_fail_cnt, u.locked_yn, u.locked_at,
         u.pwd_changed_at, u.pwd_expire_at,
         u.last_login_at, u.last_login_ip,
         u.created_at
     </sql>
 
+    <sql id="userColumnsForAuth">
+        <include refid="userColumns"/>, u.password_hash
+    </sql>
+
     <select id="findByEmail" resultMap="userMap">
-        SELECT <include refid="userColumns"/>
+        SELECT <include refid="userColumnsForAuth"/>
           FROM gw_user u
           LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
           LEFT JOIN gw_position p ON p.position_id = u.position_id
@@ -109,6 +118,9 @@
                dept_id = #{deptId},
                position_id = #{positionId},
                role_cd = #{roleCd},
+               hire_date = #{hireDate},
+               resign_date = #{resignDate},
+               resign_reason = #{resignReason},
                bank_cd = #{bankCd},
                bank_account = #{bankAccount},
                updated_at = CURRENT_TIMESTAMP
@@ -143,4 +155,39 @@
                pwd_changed_at = CURRENT_TIMESTAMP
          WHERE user_id = #{userId}
     </update>
+
+    <update id="updateUseYn">
+        UPDATE gw_user SET use_yn = #{useYn} WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateRole">
+        UPDATE gw_user SET role_cd = #{roleCd} WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateEmail">
+        UPDATE gw_user SET email = #{email}, updated_at = CURRENT_TIMESTAMP WHERE user_id = #{userId}
+    </update>
+
+    <select id="listByDept" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.dept_id = #{deptId}
+           AND u.deleted_at IS NULL
+           AND u.use_yn = 'Y'
+         ORDER BY COALESCE(p.level_no, 0) DESC, u.name
+    </select>
+
+    <select id="listAll" resultMap="userMap">
+        SELECT <include refid="userColumns"/>
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_position p ON p.position_id = u.position_id
+          LEFT JOIN gw_role r ON r.role_cd = u.role_cd
+         WHERE u.deleted_at IS NULL
+           AND u.use_yn = 'Y'
+         ORDER BY u.dept_id NULLS LAST, COALESCE(p.level_no, 0) DESC, u.name
+    </select>
 </mapper>

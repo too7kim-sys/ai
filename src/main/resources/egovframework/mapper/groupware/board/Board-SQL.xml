@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.board.mapper.BoardMapper">
+
+    <resultMap id="boardMap" type="egovframework.groupware.board.service.BoardVO">
+        <id property="boardId" column="board_id"/>
+        <result property="boardCd" column="board_cd"/>
+        <result property="boardNm" column="board_nm"/>
+        <result property="boardType" column="board_type"/>
+        <result property="description" column="description"/>
+        <result property="useYn" column="use_yn"/>
+        <result property="sortNo" column="sort_no"/>
+    </resultMap>
+
+    <resultMap id="postMap" type="egovframework.groupware.board.service.PostVO">
+        <id property="postId" column="post_id"/>
+        <result property="boardId" column="board_id"/>
+        <result property="boardNm" column="board_nm"/>
+        <result property="boardCd" column="board_cd"/>
+        <result property="boardType" column="board_type"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="authorId" column="author_id"/>
+        <result property="authorName" column="author_name"/>
+        <result property="authorDept" column="author_dept"/>
+        <result property="pinnedYn" column="pinned_yn"/>
+        <result property="anonymousYn" column="anonymous_yn"/>
+        <result property="viewCnt" column="view_cnt"/>
+        <result property="answeredYn" column="answered_yn"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="cmtMap" type="egovframework.groupware.board.service.PostCommentVO">
+        <id property="cmtId" column="cmt_id"/>
+        <result property="postId" column="post_id"/>
+        <result property="parentCmtId" column="parent_cmt_id"/>
+        <result property="authorId" column="author_id"/>
+        <result property="authorName" column="author_name"/>
+        <result property="content" column="content"/>
+        <result property="anonymousYn" column="anonymous_yn"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="listBoards" resultMap="boardMap">
+        SELECT * FROM gw_board WHERE use_yn = 'Y' ORDER BY sort_no, board_id
+    </select>
+
+    <select id="findBoardByCd" resultMap="boardMap">
+        SELECT * FROM gw_board WHERE board_cd = #{boardCd}
+    </select>
+
+    <select id="findBoardById" resultMap="boardMap">
+        SELECT * FROM gw_board WHERE board_id = #{boardId}
+    </select>
+
+    <sql id="postCols">
+        p.post_id, p.board_id, b.board_nm, b.board_cd, b.board_type,
+        p.title, p.content,
+        p.author_id,
+        CASE WHEN p.anonymous_yn = 'Y' THEN '익명' ELSE u.name END AS author_name,
+        CASE WHEN p.anonymous_yn = 'Y' THEN '' ELSE COALESCE(d.dept_nm,'') END AS author_dept,
+        p.pinned_yn, p.anonymous_yn, p.view_cnt, p.answered_yn, p.attach_group_id,
+        p.created_at, p.updated_at
+    </sql>
+
+    <insert id="insertPost" parameterType="egovframework.groupware.board.service.PostVO"
+            useGeneratedKeys="true" keyProperty="postId" keyColumn="post_id">
+        INSERT INTO gw_board_post
+            (board_id, title, content, author_id, pinned_yn, anonymous_yn, attach_group_id, created_by)
+        VALUES (#{boardId}, #{title}, #{content}, #{authorId},
+                COALESCE(#{pinnedYn},'N'),
+                COALESCE(#{anonymousYn},'N'),
+                #{attachGroupId}, #{authorId})
+    </insert>
+
+    <update id="updatePost">
+        UPDATE gw_board_post
+           SET title = #{title},
+               content = #{content},
+               pinned_yn = COALESCE(#{pinnedYn}, pinned_yn),
+               anonymous_yn = COALESCE(#{anonymousYn}, anonymous_yn),
+               updated_at = CURRENT_TIMESTAMP,
+               updated_by = #{authorId}
+         WHERE post_id = #{postId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDeletePost">
+        UPDATE gw_board_post SET deleted_at = CURRENT_TIMESTAMP, updated_by = #{userId}
+         WHERE post_id = #{postId}
+    </update>
+
+    <update id="incrementViewCnt">
+        UPDATE gw_board_post SET view_cnt = view_cnt + 1 WHERE post_id = #{postId}
+    </update>
+
+    <update id="markAnswered">
+        UPDATE gw_board_post SET answered_yn = 'Y' WHERE post_id = #{postId}
+    </update>
+
+    <select id="findPostById" resultMap="postMap">
+        SELECT <include refid="postCols"/>
+          FROM gw_board_post p
+          JOIN gw_board b ON b.board_id = p.board_id
+          LEFT JOIN gw_user u ON u.user_id = p.author_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.post_id = #{postId} AND p.deleted_at IS NULL
+    </select>
+
+    <select id="listPosts" resultMap="postMap">
+        SELECT <include refid="postCols"/>
+          FROM gw_board_post p
+          JOIN gw_board b ON b.board_id = p.board_id
+          LEFT JOIN gw_user u ON u.user_id = p.author_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE p.deleted_at IS NULL AND p.board_id = #{boardId}
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(p.title) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(p.content) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+         ORDER BY p.pinned_yn DESC, p.created_at DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPosts" resultType="long">
+        SELECT COUNT(*) FROM gw_board_post p
+         WHERE p.deleted_at IS NULL AND p.board_id = #{boardId}
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(p.title) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(p.content) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+    </select>
+
+    <insert id="insertComment" parameterType="egovframework.groupware.board.service.PostCommentVO"
+            useGeneratedKeys="true" keyProperty="cmtId" keyColumn="cmt_id">
+        INSERT INTO gw_board_comment
+            (post_id, parent_cmt_id, author_id, content, anonymous_yn)
+        VALUES (#{postId}, #{parentCmtId}, #{authorId}, #{content},
+                COALESCE(#{anonymousYn}, 'N'))
+    </insert>
+
+    <update id="softDeleteComment">
+        UPDATE gw_board_comment SET deleted_at = CURRENT_TIMESTAMP
+         WHERE cmt_id = #{cmtId}
+           AND (author_id = #{authorId} OR #{roleCd} IN ('ADMIN','HR_MANAGER'))
+    </update>
+
+    <select id="listComments" resultMap="cmtMap">
+        SELECT c.cmt_id, c.post_id, c.parent_cmt_id, c.author_id,
+               CASE WHEN c.anonymous_yn = 'Y' THEN '익명' ELSE u.name END AS author_name,
+               c.content, c.anonymous_yn, c.created_at
+          FROM gw_board_comment c
+          LEFT JOIN gw_user u ON u.user_id = c.author_id
+         WHERE c.post_id = #{postId} AND c.deleted_at IS NULL
+         ORDER BY c.created_at
+    </select>
+</mapper>

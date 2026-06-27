@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.leave.mapper.LeaveMapper">
+
+    <resultMap id="reqMap" type="egovframework.groupware.leave.service.LeaveRequestVO">
+        <id property="leaveId" column="leave_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="leaveTypeCd" column="leave_type_cd"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="startAt" column="start_at"/>
+        <result property="endAt" column="end_at"/>
+        <result property="days" column="days"/>
+        <result property="reason" column="reason"/>
+        <result property="halfTypeCd" column="half_type_cd"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="approvalDocId" column="approval_doc_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="balMap" type="egovframework.groupware.leave.service.LeaveBalanceVO">
+        <result property="userId" column="user_id"/>
+        <result property="year" column="bal_year"/>
+        <result property="annualGiven" column="annual_given"/>
+        <result property="annualUsed" column="annual_used"/>
+    </resultMap>
+
+    <insert id="insertRequest" parameterType="egovframework.groupware.leave.service.LeaveRequestVO"
+            useGeneratedKeys="true" keyProperty="leaveId" keyColumn="leave_id">
+        INSERT INTO gw_leave_req (user_id, leave_type_cd, start_dt, end_dt,
+                                  start_at, end_at, days, reason, half_type_cd,
+                                  status_cd, approval_doc_id)
+        VALUES (#{userId}, #{leaveTypeCd}, #{startDt}, #{endDt},
+                #{startAt}, #{endAt}, #{days}, #{reason}, #{halfTypeCd},
+                COALESCE(#{statusCd}, 'IN_PROGRESS'), #{approvalDocId})
+    </insert>
+
+    <!-- 일자 단위 휴가(연차/반차/병가/경조/기타) 신청 시 중복 검사.
+         같은 사용자의 IN_PROGRESS/APPROVED 휴가가 같은 일자에 잡혀 있는지 — 시간연차도 포함.
+         (HOURLY 의 start_dt/end_dt 는 단일 일자이므로 일자 비교만으로 충분히 잡힌다.) -->
+    <select id="countOverlappingDay" resultType="int">
+        SELECT COUNT(*) FROM gw_leave_req
+         WHERE user_id = #{userId}
+           AND status_cd IN ('IN_PROGRESS','APPROVED')
+           AND deleted_at IS NULL
+           AND start_dt &lt;= #{end} AND end_dt &gt;= #{start}
+    </select>
+
+    <!-- 시간연차 신청 시 중복 검사.
+         (a) 같은 시각대의 다른 HOURLY 가 있거나,
+         (b) 신청 일자에 일자 단위 휴가(비-HOURLY) 가 잡혀 있으면 막는다.
+         start_at 의 날짜 부분을 비교하기 위해 CAST AS DATE 사용 (표준 SQL, H2/PG 모두 지원). -->
+    <select id="countOverlappingHourly" resultType="int">
+        SELECT COUNT(*) FROM gw_leave_req
+         WHERE user_id = #{userId}
+           AND status_cd IN ('IN_PROGRESS','APPROVED')
+           AND deleted_at IS NULL
+           AND (
+                (leave_type_cd = 'HOURLY'
+                  AND start_at &lt; #{endAt} AND end_at &gt; #{startAt})
+             OR (leave_type_cd != 'HOURLY'
+                  AND start_dt &lt;= CAST(#{startAt} AS DATE)
+                  AND end_dt   &gt;= CAST(#{startAt} AS DATE))
+           )
+    </select>
+
+    <!-- 종일 휴가(반차/시간연차 제외) 가 해당 일자에 IN_PROGRESS/APPROVED 로 잡혀 있으면 type 반환. -->
+    <select id="findFullDayLeaveTypeOn" resultType="string">
+        SELECT leave_type_cd FROM gw_leave_req
+         WHERE user_id = #{userId}
+           AND status_cd IN ('IN_PROGRESS','APPROVED')
+           AND deleted_at IS NULL
+           AND leave_type_cd NOT IN ('HALF','HOURLY')
+           AND start_dt &lt;= #{date} AND end_dt &gt;= #{date}
+         FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <update id="updateRequestStatus">
+        UPDATE gw_leave_req
+           SET status_cd = #{statusCd}, approval_doc_id = COALESCE(#{approvalDocId}, approval_doc_id),
+               updated_at = CURRENT_TIMESTAMP
+         WHERE leave_id = #{leaveId}
+    </update>
+
+    <select id="findById" resultMap="reqMap">
+        SELECT r.*, u.name AS user_name FROM gw_leave_req r
+          JOIN gw_user u ON u.user_id = r.user_id WHERE r.leave_id = #{leaveId}
+    </select>
+
+    <select id="findByApprovalDoc" resultMap="reqMap">
+        SELECT r.*, u.name AS user_name FROM gw_leave_req r
+          JOIN gw_user u ON u.user_id = r.user_id WHERE r.approval_doc_id = #{docId}
+    </select>
+
+    <select id="listByUser" resultMap="reqMap">
+        SELECT r.*, u.name AS user_name FROM gw_leave_req r
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.user_id = #{userId}
+         ORDER BY r.created_at DESC LIMIT 200
+    </select>
+
+    <select id="findBalance" resultMap="balMap">
+        SELECT user_id, bal_year, annual_given, annual_used
+          FROM gw_leave_balance WHERE user_id = #{userId} AND bal_year = #{year}
+    </select>
+
+    <update id="upsertBalance">
+        MERGE INTO gw_leave_balance t
+        USING (VALUES (#{userId}, #{year}, #{given})) AS v(user_id, bal_year, annual_given)
+           ON t.user_id = v.user_id AND t.bal_year = v.bal_year
+        WHEN MATCHED THEN
+            UPDATE SET annual_given = v.annual_given
+        WHEN NOT MATCHED THEN
+            INSERT (user_id, bal_year, annual_given, annual_used)
+            VALUES (v.user_id, v.bal_year, v.annual_given, 0)
+    </update>
+
+    <update id="addUsed">
+        UPDATE gw_leave_balance
+           SET annual_used = annual_used + #{days}, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = #{userId} AND bal_year = #{year}
+    </update>
+
+    <resultMap id="balRowMap" type="egovframework.groupware.leave.service.LeaveBalanceRow">
+        <result property="userId" column="user_id"/>
+        <result property="name" column="name"/>
+        <result property="email" column="email"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="hireDate" column="hire_date"/>
+        <result property="resignDate" column="resign_date"/>
+        <result property="year" column="bal_year"/>
+        <result property="annualGiven" column="annual_given"/>
+        <result property="annualUsed" column="annual_used"/>
+    </resultMap>
+
+    <select id="listBalancesForYear" resultMap="balRowMap">
+        SELECT u.user_id, u.name, u.email, u.hire_date, u.resign_date,
+               d.dept_nm AS dept_name,
+               #{year}   AS bal_year,
+               COALESCE(b.annual_given, 0) AS annual_given,
+               COALESCE(b.annual_used,  0) AS annual_used
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_leave_balance b
+                 ON b.user_id = u.user_id AND b.bal_year = #{year}
+         WHERE u.deleted_at IS NULL AND u.use_yn = 'Y'
+        <if test="keyword != null and keyword != ''">
+           AND (u.name  ILIKE '%' || #{keyword} || '%'
+             OR u.email ILIKE '%' || #{keyword} || '%'
+             OR d.dept_nm ILIKE '%' || #{keyword} || '%')
+        </if>
+         ORDER BY d.dept_nm NULLS LAST, u.name
+    </select>
+
+    <!-- 일괄 부여 대상자 — 해당 연도 시작일 이전에 이미 퇴직한 사람 제외.
+         그 해 중도 퇴사 예정자는 포함(중도 퇴사 시 휴가 일할 정산은 별도 정책). -->
+    <select id="listGrantTargetsForYear" resultMap="balRowMap">
+        SELECT u.user_id, u.name, u.email, u.hire_date, u.resign_date,
+               d.dept_nm AS dept_name,
+               #{year}   AS bal_year,
+               COALESCE(b.annual_given, 0) AS annual_given,
+               COALESCE(b.annual_used,  0) AS annual_used
+          FROM gw_user u
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+          LEFT JOIN gw_leave_balance b
+                 ON b.user_id = u.user_id AND b.bal_year = #{year}
+         WHERE u.deleted_at IS NULL AND u.use_yn = 'Y'
+           AND (u.resign_date IS NULL OR u.resign_date >= #{yearStart})
+         ORDER BY u.name
+    </select>
+</mapper>

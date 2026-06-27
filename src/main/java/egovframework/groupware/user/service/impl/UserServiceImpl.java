@@ -72,4 +72,39 @@ public class UserServiceImpl implements UserService {
     public void unlock(Long userId) {
         userMapper.unlock(userId);
     }
+
+    @Override
+    public void resetPassword(Long userId, String rawPassword) {
+        userMapper.updatePassword(userId, passwordEncoder.encode(rawPassword));
+    }
+
+    @Override
+    public void setUseYn(Long userId, String useYn) {
+        userMapper.updateUseYn(userId, "N".equals(useYn) ? "N" : "Y");
+    }
+
+    @Override
+    public void setRole(Long userId, String roleCd) {
+        userMapper.updateRole(userId, roleCd);
+    }
+
+    @Override
+    public void changeEmail(Long userId, String newEmail) {
+        userMapper.updateEmail(userId, newEmail);
+    }
+
+    @Override
+    public List<UserVO> listByDept(Long deptId) {
+        return userMapper.listByDept(deptId);
+    }
+
+    @Override
+    public List<UserVO> listAll() {
+        return userMapper.listAll();
+    }
+
+    @Override
+    public void update(UserVO vo) {
+        userMapper.update(vo);
+    }
 }

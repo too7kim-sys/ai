@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.attach.mapper.AttachMapper">
+
+    <resultMap id="attachMap" type="egovframework.groupware.attach.service.AttachVO">
+        <id property="attachId" column="attach_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="fileNm" column="file_nm"/>
+        <result property="storedNm" column="stored_nm"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="mimeType" column="mime_type"/>
+        <result property="storageType" column="storage_type"/>
+        <result property="storedPath" column="stored_path"/>
+        <result property="checksum" column="checksum"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="createdBy" column="created_by"/>
+    </resultMap>
+
+    <insert id="insertGroup">
+        INSERT INTO gw_attach_group (owner_entity, owner_entity_id) VALUES (#{ownerEntity}, #{ownerEntityId})
+    </insert>
+
+    <select id="lastGroupId" resultType="long">
+        SELECT MAX(group_id) FROM gw_attach_group
+    </select>
+
+    <insert id="insert" parameterType="egovframework.groupware.attach.service.AttachVO"
+            useGeneratedKeys="true" keyProperty="attachId" keyColumn="attach_id">
+        INSERT INTO gw_attach
+            (group_id, file_nm, stored_nm, file_size, mime_type, storage_type, stored_path, checksum, created_by)
+        VALUES (#{groupId}, #{fileNm}, #{storedNm}, #{fileSize}, #{mimeType},
+                COALESCE(#{storageType},'LOCAL'), #{storedPath}, #{checksum}, #{createdBy})
+    </insert>
+
+    <select id="findById" resultMap="attachMap">
+        SELECT * FROM gw_attach WHERE attach_id = #{attachId}
+    </select>
+
+    <select id="findOwnerEntity" resultType="string">
+        SELECT g.owner_entity
+          FROM gw_attach a
+          JOIN gw_attach_group g ON g.group_id = a.group_id
+         WHERE a.attach_id = #{attachId}
+    </select>
+
+    <select id="findByGroup" resultMap="attachMap">
+        SELECT * FROM gw_attach WHERE group_id = #{groupId} ORDER BY attach_id
+    </select>
+
+    <delete id="delete">
+        DELETE FROM gw_attach WHERE attach_id = #{attachId}
+    </delete>
+</mapper>

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.payroll.mapper.SettlementMapper">
+
+    <resultMap id="yetMap" type="egovframework.groupware.payroll.service.YearEndTaxVO">
+        <id property="yetId" column="yet_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="taxYear" column="tax_year"/>
+        <result property="grossPay" column="gross_pay"/>
+        <result property="taxablePay" column="taxable_pay"/>
+        <result property="paidTax" column="paid_tax"/>
+        <result property="incomeDeduction" column="income_deduction"/>
+        <result property="taxCredit" column="tax_credit"/>
+        <result property="determinedTax" column="determined_tax"/>
+        <result property="settledTax" column="settled_tax"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="memo" column="memo"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="sevMap" type="egovframework.groupware.payroll.service.SeveranceVO">
+        <id property="sevId" column="sev_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="deptNm" column="dept_nm"/>
+        <result property="hireDate" column="hire_date"/>
+        <result property="leaveDate" column="leave_date"/>
+        <result property="serviceDays" column="service_days"/>
+        <result property="avgMonthlyWage" column="avg_monthly_wage"/>
+        <result property="avgDailyWage" column="avg_daily_wage"/>
+        <result property="severancePay" column="severance_pay"/>
+        <result property="severanceTax" column="severance_tax"/>
+        <result property="netPay" column="net_pay"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="paidDt" column="paid_dt"/>
+        <result property="memo" column="memo"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="createdBy" column="created_by"/>
+    </resultMap>
+
+    <!-- 연간 급여 집계: 소득세는 payroll_item 의 INCOME_TAX 코드 합 -->
+    <select id="sumYearlyPayroll" resultType="map">
+        SELECT
+            COALESCE(SUM(p.gross_pay), 0)    AS gross_pay,
+            COALESCE(SUM(p.taxable_pay), 0)  AS taxable_pay,
+            COALESCE((SELECT SUM(i.amount)
+                        FROM gw_payroll_item i
+                        JOIN gw_payroll p2 ON p2.pay_id = i.pay_id
+                       WHERE p2.user_id = #{userId}
+                         AND p2.pay_month LIKE #{year} || '-%'
+                         AND p2.status_cd IN ('CONFIRMED','PAID')
+                         AND i.code_val IN ('INCOME_TAX','LOCAL_INCOME_TAX')), 0) AS income_tax,
+            COUNT(*) AS months
+          FROM gw_payroll p
+         WHERE p.user_id = #{userId}
+           AND p.pay_month LIKE #{year} || '-%'
+           AND p.status_cd IN ('CONFIRMED','PAID')
+    </select>
+
+    <!-- 최근 N개월 급여 합계 (퇴직금 평균임금) -->
+    <select id="sumRecentPayroll" resultType="map">
+        SELECT COALESCE(SUM(gross_pay), 0) AS gross_sum,
+               COUNT(*) AS months
+          FROM (
+            SELECT gross_pay
+              FROM gw_payroll
+             WHERE user_id = #{userId}
+               AND status_cd IN ('CONFIRMED','PAID')
+             ORDER BY pay_month DESC
+             LIMIT #{months}
+          ) recent
+    </select>
+
+    <insert id="insertYearEnd" parameterType="egovframework.groupware.payroll.service.YearEndTaxVO"
+            useGeneratedKeys="true" keyProperty="yetId" keyColumn="yet_id">
+        INSERT INTO gw_year_end_tax
+            (user_id, tax_year, gross_pay, taxable_pay, paid_tax,
+             income_deduction, tax_credit, determined_tax, settled_tax, status_cd, memo)
+        VALUES (#{userId}, #{taxYear}, #{grossPay}, #{taxablePay}, #{paidTax},
+                #{incomeDeduction}, #{taxCredit}, #{determinedTax}, #{settledTax},
+                COALESCE(#{statusCd},'DRAFT'), #{memo})
+    </insert>
+
+    <update id="updateYearEnd">
+        UPDATE gw_year_end_tax
+           SET gross_pay = #{grossPay}, taxable_pay = #{taxablePay}, paid_tax = #{paidTax},
+               income_deduction = #{incomeDeduction}, tax_credit = #{taxCredit},
+               determined_tax = #{determinedTax}, settled_tax = #{settledTax},
+               status_cd = #{statusCd}, memo = #{memo}, updated_at = CURRENT_TIMESTAMP
+         WHERE yet_id = #{yetId}
+    </update>
+
+    <select id="findYearEnd" resultMap="yetMap">
+        SELECT y.*, u.name AS user_name, d.dept_nm
+          FROM gw_year_end_tax y
+          JOIN gw_user u ON u.user_id = y.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE y.user_id = #{userId} AND y.tax_year = #{taxYear}
+    </select>
+
+    <select id="listYearEnd" resultMap="yetMap">
+        SELECT y.*, u.name AS user_name, d.dept_nm
+          FROM gw_year_end_tax y
+          JOIN gw_user u ON u.user_id = y.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE y.tax_year = #{taxYear}
+         ORDER BY d.dept_nm, u.name
+    </select>
+
+    <insert id="insertSeverance" parameterType="egovframework.groupware.payroll.service.SeveranceVO"
+            useGeneratedKeys="true" keyProperty="sevId" keyColumn="sev_id">
+        INSERT INTO gw_severance
+            (user_id, hire_date, leave_date, service_days, avg_monthly_wage,
+             avg_daily_wage, severance_pay, severance_tax, net_pay, status_cd, memo, created_by)
+        VALUES (#{userId}, #{hireDate}, #{leaveDate}, #{serviceDays}, #{avgMonthlyWage},
+                #{avgDailyWage}, #{severancePay}, #{severanceTax}, #{netPay},
+                COALESCE(#{statusCd},'DRAFT'), #{memo}, #{createdBy})
+    </insert>
+
+    <update id="updateSeveranceStatus">
+        UPDATE gw_severance
+           SET status_cd = #{statusCd}, paid_dt = #{paidDt}
+         WHERE sev_id = #{sevId}
+    </update>
+
+    <select id="findSeverance" resultMap="sevMap">
+        SELECT s.*, u.name AS user_name, d.dept_nm
+          FROM gw_severance s
+          JOIN gw_user u ON u.user_id = s.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         WHERE s.sev_id = #{sevId}
+    </select>
+
+    <select id="listSeverance" resultMap="sevMap">
+        SELECT s.*, u.name AS user_name, d.dept_nm
+          FROM gw_severance s
+          JOIN gw_user u ON u.user_id = s.user_id
+          LEFT JOIN gw_dept d ON d.dept_id = u.dept_id
+         ORDER BY s.created_at DESC
+    </select>
+</mapper>

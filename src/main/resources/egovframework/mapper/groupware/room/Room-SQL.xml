@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.room.mapper.RoomMapper">
+
+    <resultMap id="roomMap" type="egovframework.groupware.room.service.RoomVO">
+        <id property="roomId" column="room_id"/>
+        <result property="roomNm" column="room_nm"/>
+        <result property="capacity" column="capacity"/>
+        <result property="location" column="location"/>
+        <result property="equipments" column="equipments"/>
+        <result property="useYn" column="use_yn"/>
+    </resultMap>
+
+    <resultMap id="resMap" type="egovframework.groupware.room.service.RoomReservationVO">
+        <id property="resId" column="res_id"/>
+        <result property="roomId" column="room_id"/>
+        <result property="roomNm" column="room_nm"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="startDt" column="start_dt"/>
+        <result property="endDt" column="end_dt"/>
+        <result property="purpose" column="purpose"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="listRooms" resultMap="roomMap">
+        SELECT room_id, room_nm, capacity, location, equipments, use_yn
+          FROM gw_room WHERE use_yn = 'Y' ORDER BY room_id
+    </select>
+
+    <select id="findRoom" resultMap="roomMap">
+        SELECT room_id, room_nm, capacity, location, equipments, use_yn
+          FROM gw_room WHERE room_id = #{roomId}
+    </select>
+
+    <insert id="insertReservation" parameterType="egovframework.groupware.room.service.RoomReservationVO"
+            useGeneratedKeys="true" keyProperty="resId" keyColumn="res_id">
+        INSERT INTO gw_room_res (room_id, user_id, start_dt, end_dt, purpose)
+        VALUES (#{roomId}, #{userId}, #{startDt}, #{endDt}, #{purpose})
+    </insert>
+
+    <update id="softDeleteReservation">
+        UPDATE gw_room_res
+           SET deleted_at = CURRENT_TIMESTAMP
+         WHERE res_id = #{resId}
+           AND (user_id = #{userId} OR #{roleCd} IN ('ADMIN','HR_MANAGER'))
+    </update>
+
+    <sql id="resCols">
+        r.res_id, r.room_id, m.room_nm,
+        r.user_id, u.name AS user_name,
+        r.start_dt, r.end_dt, r.purpose, r.created_at
+    </sql>
+
+    <select id="findReservation" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_room_res r
+          JOIN gw_room m ON m.room_id = r.room_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.res_id = #{resId} AND r.deleted_at IS NULL
+    </select>
+
+    <select id="countOverlap" resultType="long">
+        SELECT COUNT(*) FROM gw_room_res
+         WHERE deleted_at IS NULL
+           AND room_id = #{roomId}
+           AND end_dt > #{start} AND start_dt &lt; #{end}
+        <if test="excludeResId != null">
+           AND res_id &lt;&gt; #{excludeResId}
+        </if>
+    </select>
+
+    <select id="listByDay" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_room_res r
+          JOIN gw_room m ON m.room_id = r.room_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.deleted_at IS NULL
+           AND r.room_id = #{roomId}
+           AND r.start_dt &lt; #{to}
+           AND r.end_dt   > #{from}
+         ORDER BY r.start_dt
+    </select>
+
+    <select id="listByUser" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_room_res r
+          JOIN gw_room m ON m.room_id = r.room_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.deleted_at IS NULL AND r.user_id = #{userId}
+         ORDER BY r.start_dt DESC LIMIT 100
+    </select>
+
+    <select id="listAllUpcoming" resultMap="resMap">
+        SELECT <include refid="resCols"/>
+          FROM gw_room_res r
+          JOIN gw_room m ON m.room_id = r.room_id
+          JOIN gw_user u ON u.user_id = r.user_id
+         WHERE r.deleted_at IS NULL
+           AND r.end_dt >= #{from}
+         ORDER BY r.start_dt LIMIT #{limit}
+    </select>
+</mapper>

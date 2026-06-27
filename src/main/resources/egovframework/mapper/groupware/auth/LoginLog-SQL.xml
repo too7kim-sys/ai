@@ -3,8 +3,51 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="egovframework.groupware.auth.mapper.LoginLogMapper">
 
+    <resultMap id="logMap" type="egovframework.groupware.auth.service.LoginLogVO">
+        <id property="logId" column="log_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="userEmail" column="user_email"/>
+        <result property="emailInput" column="email_input"/>
+        <result property="loginDt" column="login_dt"/>
+        <result property="ip" column="ip"/>
+        <result property="userAgent" column="user_agent"/>
+        <result property="successYn" column="success_yn"/>
+        <result property="failReason" column="fail_reason"/>
+    </resultMap>
+
     <insert id="insert">
         INSERT INTO gw_login_log (user_id, email_input, login_dt, ip, user_agent, success_yn, fail_reason)
         VALUES (#{userId}, #{emailInput}, CURRENT_TIMESTAMP, #{ip}, #{userAgent}, #{successYn}, #{failReason})
     </insert>
+
+    <sql id="searchWhere">
+        WHERE 1=1
+        <if test="emailKeyword != null and emailKeyword != ''">
+           AND ( LOWER(l.email_input) LIKE LOWER('%' || #{emailKeyword} || '%')
+                 OR LOWER(COALESCE(u.email,'')) LIKE LOWER('%' || #{emailKeyword} || '%') )
+        </if>
+        <if test="successYn != null and successYn != ''">
+           AND l.success_yn = #{successYn}
+        </if>
+        <if test="from != null">AND l.login_dt &gt;= #{from}</if>
+        <if test="to != null">AND l.login_dt &lt;= #{to}</if>
+    </sql>
+
+    <select id="search" resultMap="logMap">
+        SELECT l.log_id, l.user_id, u.name AS user_name, u.email AS user_email,
+               l.email_input, l.login_dt, l.ip, l.user_agent, l.success_yn, l.fail_reason
+          FROM gw_login_log l
+          LEFT JOIN gw_user u ON u.user_id = l.user_id
+        <include refid="searchWhere"/>
+         ORDER BY l.login_dt DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+          FROM gw_login_log l
+          LEFT JOIN gw_user u ON u.user_id = l.user_id
+        <include refid="searchWhere"/>
+    </select>
 </mapper>

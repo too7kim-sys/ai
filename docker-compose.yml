@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: groupware-db
+    environment:
+      POSTGRES_DB: groupware
+      POSTGRES_USER: groupware
+      POSTGRES_PASSWORD: ${DB_PWD:-groupware}
+      TZ: Asia/Seoul
+    volumes:
+      - groupware_db:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U groupware -d groupware"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: groupware-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/groupware
+      DB_USER: groupware
+      DB_PWD: ${DB_PWD:-groupware}
+      # 메일 (실 SMTP 사용 시 채우기)
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@example.com}
+    volumes:
+      - groupware_uploads:/var/lib/groupware/uploads
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  groupware_db:
+  groupware_uploads:

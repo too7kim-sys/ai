@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.groupware.invoice.mapper.InvoiceMapper">
+
+    <resultMap id="invoiceMap" type="egovframework.groupware.invoice.service.InvoiceVO">
+        <id property="invoiceId" column="invoice_id"/>
+        <result property="invoiceNo" column="invoice_no"/>
+        <result property="directionCd" column="direction_cd"/>
+        <result property="vendorId" column="vendor_id"/>
+        <result property="vendorNm" column="vendor_nm"/>
+        <result property="bizContractId" column="biz_contract_id"/>
+        <result property="contractTitle" column="contract_title"/>
+        <result property="scheduleId" column="schedule_id"/>
+        <result property="issueDt" column="issue_dt"/>
+        <result property="dueDt" column="due_dt"/>
+        <result property="amountNet" column="amount_net"/>
+        <result property="vatAmount" column="vat_amount"/>
+        <result property="amountTotal" column="amount_total"/>
+        <result property="paidAmount" column="paid_amount"/>
+        <result property="remainingAmount" column="remaining_amount"/>
+        <result property="taxInvoiceYn" column="tax_invoice_yn"/>
+        <result property="statusCd" column="status_cd"/>
+        <result property="ownerUserId" column="owner_user_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="memo" column="memo"/>
+        <result property="attachGroupId" column="attach_group_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="invCols">
+        i.invoice_id, i.invoice_no, i.direction_cd, i.vendor_id, v.company_nm AS vendor_nm,
+        i.biz_contract_id, c.title AS contract_title, i.schedule_id,
+        i.issue_dt, i.due_dt, i.amount_net, i.vat_amount, i.amount_total,
+        i.paid_amount, i.remaining_amount, i.tax_invoice_yn, i.status_cd,
+        i.owner_user_id, u.name AS owner_name, i.memo, i.attach_group_id, i.created_at
+    </sql>
+
+    <insert id="insert" parameterType="egovframework.groupware.invoice.service.InvoiceVO"
+            useGeneratedKeys="true" keyProperty="invoiceId" keyColumn="invoice_id">
+        INSERT INTO gw_invoice
+            (invoice_no, direction_cd, vendor_id, biz_contract_id, schedule_id,
+             issue_dt, due_dt, amount_net, vat_amount, amount_total,
+             paid_amount, remaining_amount, tax_invoice_yn, status_cd, owner_user_id,
+             memo, created_by)
+        VALUES (#{invoiceNo}, #{directionCd}, #{vendorId}, #{bizContractId}, #{scheduleId},
+                #{issueDt}, #{dueDt}, #{amountNet}, #{vatAmount}, #{amountTotal},
+                0, #{amountTotal},
+                COALESCE(#{taxInvoiceYn},'N'),
+                COALESCE(#{statusCd},'DRAFT'),
+                #{ownerUserId}, #{memo}, #{ownerUserId})
+    </insert>
+
+    <update id="update">
+        UPDATE gw_invoice
+           SET vendor_id = #{vendorId}, biz_contract_id = #{bizContractId}, schedule_id = #{scheduleId},
+               issue_dt = #{issueDt}, due_dt = #{dueDt},
+               amount_net = #{amountNet}, vat_amount = #{vatAmount}, amount_total = #{amountTotal},
+               remaining_amount = #{amountTotal} - paid_amount,
+               tax_invoice_yn = #{taxInvoiceYn},
+               memo = #{memo}, updated_at = CURRENT_TIMESTAMP
+         WHERE invoice_id = #{invoiceId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDelete">
+        UPDATE gw_invoice SET deleted_at = CURRENT_TIMESTAMP WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE gw_invoice SET status_cd = #{statusCd}, updated_at = CURRENT_TIMESTAMP
+         WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <update id="issue">
+        UPDATE gw_invoice
+           SET status_cd = 'ISSUED', issue_dt = COALESCE(issue_dt, CURRENT_DATE)
+         WHERE invoice_id = #{invoiceId} AND status_cd = 'DRAFT'
+    </update>
+
+    <!-- 결제 적용 — 과결제(잔액 음수) 방지를 위해 paid_amount + paidDelta &lt;= amount_total
+         가드를 WHERE 절에 둔다. 조건 미충족 시 0 rows → 서비스가 INVALID_AMOUNT 거부. -->
+    <update id="applyPayment">
+        UPDATE gw_invoice
+           SET paid_amount = paid_amount + #{paidDelta},
+               remaining_amount = amount_total - (paid_amount + #{paidDelta}),
+               status_cd = CASE
+                   WHEN amount_total - (paid_amount + #{paidDelta}) &lt;= 0 THEN 'PAID'
+                   WHEN (paid_amount + #{paidDelta}) &gt; 0 THEN 'PARTIALLY_PAID'
+                   ELSE status_cd
+               END,
+               updated_at = CURRENT_TIMESTAMP
+         WHERE invoice_id = #{invoiceId} AND deleted_at IS NULL
+           AND paid_amount + #{paidDelta} &lt;= amount_total
+           AND paid_amount + #{paidDelta} &gt;= 0
+    </update>
+
+    <update id="markOverdue">
+        UPDATE gw_invoice
+           SET status_cd = 'OVERDUE'
+         WHERE deleted_at IS NULL
+           AND due_dt IS NOT NULL AND due_dt &lt; CURRENT_DATE
+           AND status_cd IN ('ISSUED','PARTIALLY_PAID')
+           AND remaining_amount &gt; 0
+    </update>
+
+    <select id="findById" resultMap="invoiceMap">
+        SELECT <include refid="invCols"/>
+          FROM gw_invoice i
+          JOIN gw_vendor v ON v.vendor_id = i.vendor_id
+          LEFT JOIN gw_biz_contract c ON c.biz_contract_id = i.biz_contract_id
+          LEFT JOIN gw_user u ON u.user_id = i.owner_user_id
+         WHERE i.invoice_id = #{invoiceId} AND i.deleted_at IS NULL
+    </select>
+
+    <sql id="searchWhere">
+        WHERE i.deleted_at IS NULL
+        <if test="directionCd != null and directionCd != ''">AND i.direction_cd = #{directionCd}</if>
+        <if test="statusCd != null and statusCd != ''">AND i.status_cd = #{statusCd}</if>
+        <if test="vendorId != null">AND i.vendor_id = #{vendorId}</if>
+        <if test="keyword != null and keyword != ''">
+           AND (LOWER(i.invoice_no) LIKE LOWER('%' || #{keyword} || '%')
+                OR LOWER(v.company_nm) LIKE LOWER('%' || #{keyword} || '%'))
+        </if>
+    </sql>
+
+    <select id="search" resultMap="invoiceMap">
+        SELECT <include refid="invCols"/>
+          FROM gw_invoice i
+          JOIN gw_vendor v ON v.vendor_id = i.vendor_id
+          LEFT JOIN gw_biz_contract c ON c.biz_contract_id = i.biz_contract_id
+          LEFT JOIN gw_user u ON u.user_id = i.owner_user_id
+        <include refid="searchWhere"/>
+         ORDER BY i.issue_dt DESC, i.invoice_id DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM gw_invoice i
+          JOIN gw_vendor v ON v.vendor_id = i.vendor_id
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="sumByDirection" resultType="map">
+        SELECT COUNT(*) AS cnt,
+               COALESCE(SUM(amount_total), 0) AS total_amount,
+               COALESCE(SUM(paid_amount), 0) AS paid_amount,
+               COALESCE(SUM(remaining_amount), 0) AS remaining_amount
+          FROM gw_invoice
+         WHERE deleted_at IS NULL AND direction_cd = #{directionCd}
+           AND status_cd &lt;&gt; 'CANCELED'
+    </select>
+
+    <select id="sumOutstanding" resultType="map">
+        SELECT COUNT(*) AS cnt,
+               COALESCE(SUM(remaining_amount), 0) AS remaining_amount
+          FROM gw_invoice
+         WHERE deleted_at IS NULL AND direction_cd = #{directionCd}
+           AND status_cd IN ('ISSUED','PARTIALLY_PAID','OVERDUE')
+    </select>
+
+    <select id="monthlyByDirection" resultType="map">
+        SELECT FORMATDATETIME(issue_dt, 'yyyy-MM') AS ym,
+               COALESCE(SUM(amount_total), 0) AS total_amount,
+               COALESCE(SUM(paid_amount), 0) AS paid_amount
+          FROM gw_invoice
+         WHERE deleted_at IS NULL AND direction_cd = #{directionCd}
+           AND issue_dt &gt;= DATEADD('MONTH', -#{months}, CURRENT_DATE)
+         GROUP BY FORMATDATETIME(issue_dt, 'yyyy-MM')
+         ORDER BY FORMATDATETIME(issue_dt, 'yyyy-MM')
+    </select>
+
+    <select id="topVendorsByAmount" resultType="map">
+        SELECT v.vendor_id AS vendor_id, v.company_nm AS vendor_nm,
+               COUNT(*) AS cnt,
+               COALESCE(SUM(i.amount_total), 0) AS total_amount,
+               COALESCE(SUM(i.remaining_amount), 0) AS remaining_amount
+          FROM gw_invoice i
+          JOIN gw_vendor v ON v.vendor_id = i.vendor_id
+         WHERE i.deleted_at IS NULL AND i.direction_cd = #{directionCd}
+         GROUP BY v.vendor_id, v.company_nm
+         ORDER BY total_amount DESC
+         LIMIT #{limit}
+    </select>
+</mapper>
