@@ -104,10 +104,13 @@ public class CalendarController {
         return "redirect:/calendar/main.do";
     }
 
+    /** 한국 그룹웨어 — UTC 컨테이너에서도 일정 입력이 KST 로 일관 해석되도록 명시 고정. */
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private LocalDateTime parse(String s) {
         try {
-            // FullCalendar 가 보내는 ISO with offset 또는 단순 LocalDateTime 둘 다 허용
-            return OffsetDateTime.parse(s).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+            // FullCalendar 가 보내는 ISO with offset 또는 단순 LocalDateTime 둘 다 허용.
+            return OffsetDateTime.parse(s).atZoneSameInstant(KST).toLocalDateTime();
         } catch (Exception e1) {
             try { return LocalDateTime.parse(s); } catch (Exception e2) { return LocalDateTime.now(); }
         }

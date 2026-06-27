@@ -150,12 +150,15 @@ public class PayrollServiceImpl implements PayrollService {
         return new Prorated(proratedBase, BigDecimal.valueOf(daysWorked), true);
     }
 
+    /** 한국 그룹웨어 — UTC 컨테이너에서 운영해도 일 단위 비교가 어긋나지 않도록 KST 고정. */
+    private static final java.time.ZoneId KST = java.time.ZoneId.of("Asia/Seoul");
+
     private static LocalDate toLocalDate(Object o) {
         if (o == null) return null;
         if (o instanceof LocalDate) return (LocalDate) o;
         if (o instanceof java.sql.Date) return ((java.sql.Date) o).toLocalDate();
         if (o instanceof java.util.Date) {
-            return ((java.util.Date) o).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+            return ((java.util.Date) o).toInstant().atZone(KST).toLocalDate();
         }
         return LocalDate.parse(o.toString());
     }
