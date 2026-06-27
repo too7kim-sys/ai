@@ -226,15 +226,27 @@ public class PayrollServiceImpl implements PayrollService {
         p.setAbsentDays(BigDecimal.valueOf(toInt(agg.get("absent_days"))));
     }
 
-    /** 해당 급여월의 PLANNED 상여를 지급 코드별 금액으로 병합 (REGULAR_BONUS/HOLIDAY_BONUS/PERFORMANCE_BONUS). */
+    /**
+     * 해당 급여월의 PLANNED 상여를 지급 코드별 금액으로 병합.
+     * 매핑: REGULAR→REGULAR_BONUS, HOLIDAY→HOLIDAY_BONUS, PERFORMANCE→PERFORMANCE_BONUS,
+     *       SPECIAL→ETC_ALLOW. 그 외(스키마 확장으로 새 코드가 들어온 경우)는 운영자가
+     *       인지할 수 있도록 WARN 로깅 + 안전한 ETC_ALLOW 로 분류한다.
+     */
     private void mergeBonuses(PayrollVO p, Map<String, Long> payments) {
         if (p.getPayMonth() == null) return;
         for (BonusVO b : bonusMapper.findPlannedByUserMonth(p.getUserId(), p.getPayMonth())) {
-            String code = switch (b.getBonusTypeCd()) {
+            String typeCd = b.getBonusTypeCd();
+            String code = switch (typeCd == null ? "" : typeCd) {
+                case "REGULAR"     -> "REGULAR_BONUS";
                 case "HOLIDAY"     -> "HOLIDAY_BONUS";
                 case "PERFORMANCE" -> "PERFORMANCE_BONUS";
                 case "SPECIAL"     -> "ETC_ALLOW";
-                default            -> "REGULAR_BONUS";
+                default -> {
+                    log.warn("Unknown bonus_type_cd='{}' (bonusId={}) — ETC_ALLOW 로 분류. "
+                            + "신규 코드라면 mergeBonuses 의 매핑을 업데이트하세요.",
+                            typeCd, b.getBonusId());
+                    yield "ETC_ALLOW";
+                }
             };
             long amt = b.getAmount() == null ? 0 : b.getAmount().longValueExact();
             payments.merge(code, amt, Long::sum);

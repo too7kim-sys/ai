@@ -68,11 +68,17 @@ public class AttachServiceImpl implements AttachService, InitializingBean {
     }
 
     private void validateUploadName(String name) {
-        String lower = name.toLowerCase();
-        int dot = lower.lastIndexOf('.');
-        String ext = dot > -1 ? lower.substring(dot) : "";
-        if (BLOCKED_EXT.contains(ext)) {
-            throw new ApiException("INVALID_FILE", "허용되지 않는 파일 형식입니다: " + ext);
+        // 더블 확장자 우회(예: shell.php.jpg) 차단 — 모든 dot 이후 토큰을 각각 검사한다.
+        // Apache 등 일부 서버 설정에서는 .php.jpg 가 PHP 로 해석될 수 있고, 다운로드
+        // 후 사용자가 확장자를 손으로 잘라 실행할 위험도 있다. 안전한 확장자가 마지막에
+        // 붙어 있어도 중간 토큰 중 하나라도 위험하면 업로드 거부.
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        String[] parts = lower.split("\\.");
+        for (int i = 1; i < parts.length; i++) {
+            String ext = "." + parts[i];
+            if (BLOCKED_EXT.contains(ext)) {
+                throw new ApiException("INVALID_FILE", "허용되지 않는 파일 형식입니다: " + ext);
+            }
         }
     }
 
