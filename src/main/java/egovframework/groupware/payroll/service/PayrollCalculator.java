@@ -56,6 +56,8 @@ public class PayrollCalculator {
         public int dependents = 1;     // 본인 포함
         public int childrenUnder20 = 0;
         public List<InsuranceRateVO> rates = new ArrayList<>();
+        /** 해당 월에 유효한 간이세액 구간. 비어 있으면 fallback 상수 표 사용. */
+        public List<IncomeTaxBracketVO> taxBrackets = new ArrayList<>();
 
         public Input baseSalary(BigDecimal v) { this.monthlyBaseSal = v; return this; }
         public Input manual(String code, BigDecimal v) { this.manualPayments.put(code, v); return this; }
@@ -66,6 +68,9 @@ public class PayrollCalculator {
             this.dependents = dependents; this.childrenUnder20 = childrenUnder20; return this;
         }
         public Input withRates(List<InsuranceRateVO> rates) { this.rates = rates; return this; }
+        public Input withTaxBrackets(List<IncomeTaxBracketVO> brackets) {
+            this.taxBrackets = brackets == null ? new ArrayList<>() : brackets; return this;
+        }
     }
 
     @Getter
@@ -134,12 +139,14 @@ public class PayrollCalculator {
             else r.nonTaxablePay = r.nonTaxablePay.add(p.getAmount());
         }
 
-        // 6) 4대보험 공제
+        // 6) 4대보험 공제 — 모든 항목에 base_min/base_max 가드를 일관 적용한다.
+        //    (해당 보험에 상하한이 정의돼 있지 않으면 NULL 이라 자동으로 무시됨.
+        //     예: 고용보험은 정책상 상한이 거의 없으나 정부가 도입할 경우 DB 만 갱신하면 반영.)
         BigDecimal baseForNpHi = r.taxablePay; // 보수월액 (단순화)
-        BigDecimal np  = applyRate(in.rates, "NP",  baseForNpHi, true);
-        BigDecimal hi  = applyRate(in.rates, "HI",  baseForNpHi, false);
+        BigDecimal np  = applyRate(in.rates, "NP",  baseForNpHi);
+        BigDecimal hi  = applyRate(in.rates, "HI",  baseForNpHi);
         BigDecimal ltc = hi.multiply(rate(in.rates, "LTC")).setScale(0, RoundingMode.HALF_UP);
-        BigDecimal ei  = baseForNpHi.multiply(rate(in.rates, "EI")).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal ei  = applyRate(in.rates, "EI",  baseForNpHi);
 
         addDeduction(r, "NP",  "국민연금",   np);
         addDeduction(r, "HI",  "건강보험",   hi);
@@ -147,11 +154,11 @@ public class PayrollCalculator {
         addDeduction(r, "EI",  "고용보험",   ei);
 
         // 7) 회사 부담분
-        BigDecimal npE  = applyRateEmployer(in.rates, "NP",  baseForNpHi, true);
-        BigDecimal hiE  = applyRateEmployer(in.rates, "HI",  baseForNpHi, false);
+        BigDecimal npE  = applyRateEmployer(in.rates, "NP",  baseForNpHi);
+        BigDecimal hiE  = applyRateEmployer(in.rates, "HI",  baseForNpHi);
         BigDecimal ltcE = hiE.multiply(rateEmployer(in.rates, "LTC")).setScale(0, RoundingMode.HALF_UP);
-        BigDecimal eiE  = baseForNpHi.multiply(rateEmployer(in.rates, "EI")).setScale(0, RoundingMode.HALF_UP);
-        BigDecimal wcE  = baseForNpHi.multiply(rateEmployer(in.rates, "WC")).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal eiE  = applyRateEmployer(in.rates, "EI",  baseForNpHi);
+        BigDecimal wcE  = applyRateEmployer(in.rates, "WC",  baseForNpHi);
         addEmployer(r, "NP",  npE);
         addEmployer(r, "HI",  hiE);
         addEmployer(r, "LTC", ltcE);
@@ -159,7 +166,7 @@ public class PayrollCalculator {
         addEmployer(r, "WC",  wcE);
 
         // 8) 소득세 간이세액 + 지방소득세
-        BigDecimal incomeTax = simplifiedIncomeTax(r.taxablePay, in.dependents, in.childrenUnder20);
+        BigDecimal incomeTax = computeIncomeTax(r.taxablePay, in.dependents, in.childrenUnder20, in.taxBrackets);
         BigDecimal localTax  = incomeTax.multiply(LOCAL_TAX_RATE).setScale(0, RoundingMode.HALF_UP);
         addDeduction(r, "INCOME_TAX",       "소득세",     incomeTax);
         addDeduction(r, "LOCAL_INCOME_TAX", "지방소득세", localTax);
@@ -171,12 +178,51 @@ public class PayrollCalculator {
     }
 
     /**
-     * 간이세액표(단순화). 부양가족 1인당 8천원, 자녀 1인당 추가 1만원 공제.
-     * 실제 국세청 표는 PDF로 별도 매핑 가능.
+     * 소득세 간이세액 계산. brackets 가 있으면 DB 기반(매년 변경 대응), 없으면
+     * 하드코딩 fallback 으로 동작해 마이그레이션 직후/테스트 환경에서도 안전.
+     *
+     * 산식: base_tax + (taxable - min_taxable) * progressive_rate
+     *        - dependents × dependent_deduction
+     *        - children   × child_deduction
      */
-    public BigDecimal simplifiedIncomeTax(BigDecimal taxable, int dependents, int children) {
-        long v = taxable == null ? 0 : taxable.longValueExact();
+    public BigDecimal computeIncomeTax(BigDecimal taxable, int dependents, int children,
+                                       List<IncomeTaxBracketVO> brackets) {
+        long v = taxable == null ? 0L : taxable.setScale(0, RoundingMode.DOWN).longValueExact();
         if (v <= 0) return BigDecimal.ZERO;
+        if (brackets == null || brackets.isEmpty()) {
+            return simplifiedIncomeTaxFallback(v, dependents, children);
+        }
+        long dependentDeduction = 0L;
+        long childDeduction = 0L;
+        long tax = 0L;
+        boolean matched = false;
+        for (IncomeTaxBracketVO b : brackets) {
+            long min = nzl(b.getMinTaxable());
+            Long maxObj = b.getMaxTaxable() == null ? null : b.getMaxTaxable().longValueExact();
+            // 같은 연도의 모든 행에 동일 공제값이 들어가므로 한 번만 잡으면 됨.
+            dependentDeduction = nzl(b.getDependentDeduction());
+            childDeduction = nzl(b.getChildDeduction());
+            if (v >= min && (maxObj == null || v < maxObj)) {
+                long base = nzl(b.getBaseTax());
+                BigDecimal progressive = b.getProgressiveRate() == null
+                        ? BigDecimal.ZERO : b.getProgressiveRate();
+                long progressivePart = BigDecimal.valueOf(v - min)
+                        .multiply(progressive)
+                        .setScale(0, RoundingMode.HALF_UP)
+                        .longValueExact();
+                tax = base + progressivePart;
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) return BigDecimal.ZERO;
+        tax -= Math.max(0, dependents) * dependentDeduction;
+        tax -= Math.max(0, children) * childDeduction;
+        return BigDecimal.valueOf(Math.max(0L, tax));
+    }
+
+    /** DB brackets 가 없을 때만 사용되는 백업 — 2025년 6단계 누진을 그대로 보관. */
+    private BigDecimal simplifiedIncomeTaxFallback(long v, int dependents, int children) {
         long tax;
         if (v < 2_000_000)       tax = 0;
         else if (v < 3_000_000)  tax = (long) ((v - 2_000_000) * 0.06);
@@ -188,6 +234,8 @@ public class PayrollCalculator {
         tax -= Math.max(0, children) * 10_000L;
         return BigDecimal.valueOf(Math.max(0, tax));
     }
+
+    private static long nzl(BigDecimal v) { return v == null ? 0L : v.longValueExact(); }
 
     private void addPayment(Result r, String code, String name, BigDecimal amount, boolean taxable) {
         PayrollItemVO i = new PayrollItemVO();
@@ -211,26 +259,29 @@ public class PayrollCalculator {
         r.employerCosts.add(e);
     }
 
-    private BigDecimal applyRate(List<InsuranceRateVO> rates, String cd, BigDecimal base, boolean useBounds) {
+    /**
+     * 근로자 부담분 계산 — base 에 보험별 상하한(base_min/base_max) 을 항상 일관 적용.
+     * 상하한이 NULL 이면 그대로 통과(예: 건강보험은 상한 없이 NULL → 보수월액 그대로).
+     */
+    private BigDecimal applyRate(List<InsuranceRateVO> rates, String cd, BigDecimal base) {
         InsuranceRateVO r = findRate(rates, cd);
         if (r == null) return BigDecimal.ZERO;
-        BigDecimal b = base == null ? BigDecimal.ZERO : base;
-        if (useBounds) {
-            if (r.getBaseMin() != null && b.compareTo(r.getBaseMin()) < 0) b = r.getBaseMin();
-            if (r.getBaseMax() != null && b.compareTo(r.getBaseMax()) > 0) b = r.getBaseMax();
-        }
+        BigDecimal b = clampBase(base, r);
         return b.multiply(r.getEmployeeRate()).setScale(0, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal applyRateEmployer(List<InsuranceRateVO> rates, String cd, BigDecimal base, boolean useBounds) {
+    private BigDecimal applyRateEmployer(List<InsuranceRateVO> rates, String cd, BigDecimal base) {
         InsuranceRateVO r = findRate(rates, cd);
         if (r == null) return BigDecimal.ZERO;
-        BigDecimal b = base == null ? BigDecimal.ZERO : base;
-        if (useBounds) {
-            if (r.getBaseMin() != null && b.compareTo(r.getBaseMin()) < 0) b = r.getBaseMin();
-            if (r.getBaseMax() != null && b.compareTo(r.getBaseMax()) > 0) b = r.getBaseMax();
-        }
+        BigDecimal b = clampBase(base, r);
         return b.multiply(r.getEmployerRate()).setScale(0, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal clampBase(BigDecimal base, InsuranceRateVO r) {
+        BigDecimal b = base == null ? BigDecimal.ZERO : base;
+        if (r.getBaseMin() != null && b.compareTo(r.getBaseMin()) < 0) b = r.getBaseMin();
+        if (r.getBaseMax() != null && b.compareTo(r.getBaseMax()) > 0) b = r.getBaseMax();
+        return b;
     }
 
     private BigDecimal rate(List<InsuranceRateVO> rates, String cd) {

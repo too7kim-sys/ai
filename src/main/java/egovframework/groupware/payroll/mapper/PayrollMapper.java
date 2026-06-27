@@ -1,5 +1,6 @@
 package egovframework.groupware.payroll.mapper;
 
+import egovframework.groupware.payroll.service.IncomeTaxBracketVO;
 import egovframework.groupware.payroll.service.InsuranceRateVO;
 import egovframework.groupware.payroll.service.PayrollEmployerCostVO;
 import egovframework.groupware.payroll.service.PayrollItemVO;
@@ -16,6 +17,23 @@ import java.util.Map;
 public interface PayrollMapper {
 
     List<InsuranceRateVO> findActiveRates(@Param("on") LocalDate on);
+
+    /** 해당 시점에 유효한 소득세 간이세액 구간(min_taxable 오름차순). */
+    List<IncomeTaxBracketVO> findActiveTaxBrackets(@Param("on") LocalDate on);
+
+    int insertRate(InsuranceRateVO vo);
+    int updateRate(InsuranceRateVO vo);
+    int deleteRate(@Param("rateId") Long rateId);
+    InsuranceRateVO findRate(@Param("rateId") Long rateId);
+    /** 요율 관리 화면용 — 전 기간(과거/현재/미래) 모두 노출. */
+    List<InsuranceRateVO> listAllRates();
+
+    /** 부양가족 자동 카운트 (본인 제외 — 본인 +1 은 서비스에서 더함). */
+    int countDependents(@Param("userId") Long userId);
+
+    /** 만 20세 이하 자녀(=cutoff 이후 출생) 수. */
+    int countChildrenUnder20(@Param("userId") Long userId,
+                             @Param("cutoff") LocalDate cutoff);
 
     /** 해당 기간 근태 집계 (연장/야간/휴일 분, 근무일/결근일). */
     Map<String, Object> sumAttendance(@Param("userId") Long userId,

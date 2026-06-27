@@ -72,11 +72,85 @@
         <result property="amount" column="amount"/>
     </resultMap>
 
+    <resultMap id="taxBracketMap" type="egovframework.groupware.payroll.service.IncomeTaxBracketVO">
+        <id property="bracketId" column="bracket_id"/>
+        <result property="effectiveFrom" column="effective_from"/>
+        <result property="effectiveTo" column="effective_to"/>
+        <result property="minTaxable" column="min_taxable"/>
+        <result property="maxTaxable" column="max_taxable"/>
+        <result property="baseTax" column="base_tax"/>
+        <result property="progressiveRate" column="progressive_rate"/>
+        <result property="dependentDeduction" column="dependent_deduction"/>
+        <result property="childDeduction" column="child_deduction"/>
+        <result property="note" column="note"/>
+    </resultMap>
+
     <select id="findActiveRates" resultMap="rateMap">
         SELECT * FROM gw_insurance_rate
          WHERE effective_from &lt;= #{on}
            AND (effective_to IS NULL OR effective_to &gt; #{on})
          ORDER BY insurance_cd
+    </select>
+
+    <select id="findActiveTaxBrackets" resultMap="taxBracketMap">
+        SELECT * FROM gw_income_tax_bracket
+         WHERE effective_from &lt;= #{on}
+           AND (effective_to IS NULL OR effective_to &gt; #{on})
+         ORDER BY min_taxable
+    </select>
+
+    <!-- 요율 관리 화면용 — 미래 등록분 포함 전 행. -->
+    <select id="listAllRates" resultMap="rateMap">
+        SELECT * FROM gw_insurance_rate
+         ORDER BY effective_from DESC, insurance_cd
+    </select>
+
+    <select id="findRate" resultMap="rateMap">
+        SELECT * FROM gw_insurance_rate WHERE rate_id = #{rateId}
+    </select>
+
+    <insert id="insertRate" parameterType="egovframework.groupware.payroll.service.InsuranceRateVO"
+            useGeneratedKeys="true" keyProperty="rateId" keyColumn="rate_id">
+        INSERT INTO gw_insurance_rate
+          (insurance_cd, effective_from, effective_to, employee_rate, employer_rate,
+           base_min, base_max, note)
+        VALUES
+          (#{insuranceCd}, #{effectiveFrom}, #{effectiveTo}, #{employeeRate}, #{employerRate},
+           #{baseMin}, #{baseMax}, #{note})
+    </insert>
+
+    <update id="updateRate">
+        UPDATE gw_insurance_rate
+           SET insurance_cd = #{insuranceCd},
+               effective_from = #{effectiveFrom},
+               effective_to = #{effectiveTo},
+               employee_rate = #{employeeRate},
+               employer_rate = #{employerRate},
+               base_min = #{baseMin},
+               base_max = #{baseMax},
+               note = #{note}
+         WHERE rate_id = #{rateId}
+    </update>
+
+    <delete id="deleteRate">
+        DELETE FROM gw_insurance_rate WHERE rate_id = #{rateId}
+    </delete>
+
+    <!-- 부양가족 자동 카운트 — gw_family 의 dependent_yn='Y' 행 수.
+         본인(+1) 가산은 서비스 레이어에서 수행. -->
+    <select id="countDependents" resultType="int">
+        SELECT COUNT(*) FROM gw_family
+         WHERE user_id = #{userId} AND dependent_yn = 'Y'
+    </select>
+
+    <!-- 만 20세 이하 자녀 수 — cutoff(=급여월 1일 - 20년) 이후 출생.
+         INTERVAL 문법 대신 LocalDate 를 자바에서 계산해 넘긴다(H2/PG 호환). -->
+    <select id="countChildrenUnder20" resultType="int">
+        SELECT COUNT(*) FROM gw_family
+         WHERE user_id = #{userId}
+           AND relation_cd = 'CHILD'
+           AND birth_dt IS NOT NULL
+           AND birth_dt &gt;= #{cutoff}
     </select>
 
     <select id="findCurrentContract" resultMap="contractMap">

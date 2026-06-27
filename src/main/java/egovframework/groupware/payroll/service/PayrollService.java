@@ -37,6 +37,14 @@ public interface PayrollService {
 
     List<InsuranceRateVO> findActiveRates(LocalDate on);
 
+    /* ===== 4대보험 요율 관리(HR/ADMIN) ===== */
+    /** 전 기간(과거/현재/미래) 요율 행을 effective_from DESC 로 반환. */
+    List<InsuranceRateVO> listAllRates();
+    InsuranceRateVO findRate(Long rateId);
+    Long createRate(InsuranceRateVO vo);
+    void updateRate(InsuranceRateVO vo);
+    void deleteRate(Long rateId);
+
     /** 회사 부담분도 반환 */
     PayrollVO findPayrollWithDetails(Long payId);
 

@@ -162,20 +162,33 @@ public class PayrollServiceImpl implements PayrollService {
 
     private PayrollVO recalculateInternal(Long payId, Map<String, Long> manualPayments, BigDecimal base) {
         PayrollVO p = mapper.findPayroll(payId);
-        List<InsuranceRateVO> rates = mapper.findActiveRates(LocalDate.now());
 
-        // 1) 근태 자동 집계 — 해당 급여월의 연장/야간/휴일 분, 근무일/결근일
+        // 1) 적용 시점 결정 — 급여월 1일 기준으로 그 시점에 유효한 요율/세액표를 조회한다.
+        //    급여를 과거 시점으로 재계산할 때도 그 시점의 요율이 적용되도록(연도별 변경 대응).
+        LocalDate effectiveOn = (p.getPayMonth() != null)
+                ? YearMonth.parse(p.getPayMonth()).atDay(1)
+                : LocalDate.now();
+        List<InsuranceRateVO> rates = mapper.findActiveRates(effectiveOn);
+        List<IncomeTaxBracketVO> brackets = mapper.findActiveTaxBrackets(effectiveOn);
+
+        // 2) 근태 자동 집계 — 해당 급여월의 연장/야간/휴일 분, 근무일/결근일
         applyAttendance(p);
 
-        // 2) 수동 입력 + 해당 월 상여(PLANNED)를 지급 항목으로 병합
+        // 3) 수동 입력 + 해당 월 상여(PLANNED)를 지급 항목으로 병합
         Map<String, Long> payments = new HashMap<>(manualPayments == null ? Map.of() : manualPayments);
         mergeBonuses(p, payments);
+
+        // 4) 부양가족 자동 카운트 — gw_family 에서 dependent_yn='Y' 합 + 본인(+1).
+        //    20세 이하 자녀는 급여월 1일 기준 만 나이로 cutoff 일자를 계산해 birth_dt 비교.
+        int dependents = 1 + mapper.countDependents(p.getUserId());
+        int childrenUnder20 = mapper.countChildrenUnder20(p.getUserId(), effectiveOn.minusYears(20));
 
         PayrollCalculator.Input in = new PayrollCalculator.Input()
                 .baseSalary(base)
                 .overtime(nzi(p.getOtMin()), nzi(p.getNightMin()), nzi(p.getHolidayMin()))
-                .family(1, 0)
-                .withRates(rates);
+                .family(dependents, childrenUnder20)
+                .withRates(rates)
+                .withTaxBrackets(brackets);
         for (Map.Entry<String, Long> e : payments.entrySet()) {
             in.manual(e.getKey(), BigDecimal.valueOf(e.getValue()));
         }
@@ -298,6 +311,46 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     public List<InsuranceRateVO> findActiveRates(LocalDate on) {
         return mapper.findActiveRates(on);
+    }
+
+    @Override public List<InsuranceRateVO> listAllRates() { return mapper.listAllRates(); }
+    @Override public InsuranceRateVO findRate(Long rateId) { return mapper.findRate(rateId); }
+
+    @Override
+    @Transactional
+    public Long createRate(InsuranceRateVO vo) {
+        validateRate(vo);
+        mapper.insertRate(vo);
+        return vo.getRateId();
+    }
+
+    @Override
+    @Transactional
+    public void updateRate(InsuranceRateVO vo) {
+        if (vo.getRateId() == null) throw new ApiException("INVALID", "rateId 가 필요합니다");
+        validateRate(vo);
+        if (mapper.updateRate(vo) != 1) {
+            throw new ApiException("NOT_FOUND", "요율을 찾을 수 없습니다");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteRate(Long rateId) {
+        if (mapper.deleteRate(rateId) != 1) {
+            throw new ApiException("NOT_FOUND", "요율을 찾을 수 없습니다");
+        }
+    }
+
+    private static void validateRate(InsuranceRateVO vo) {
+        if (vo.getInsuranceCd() == null || vo.getInsuranceCd().isBlank())
+            throw new ApiException("INVALID", "보험 코드(NP/HI/LTC/EI/WC)가 필요합니다");
+        if (vo.getEffectiveFrom() == null)
+            throw new ApiException("INVALID", "적용 시작일이 필요합니다");
+        if (vo.getEmployeeRate() == null) vo.setEmployeeRate(BigDecimal.ZERO);
+        if (vo.getEmployerRate() == null) vo.setEmployerRate(BigDecimal.ZERO);
+        if (vo.getEffectiveTo() != null && vo.getEffectiveTo().isBefore(vo.getEffectiveFrom()))
+            throw new ApiException("INVALID", "종료일이 시작일보다 빠를 수 없습니다");
     }
 
     @Override
